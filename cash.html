@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خزنة الكاش اليومي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --bg:#0B1712;
+    --bg-2:#0F1E17;
+    --panel:#122A1F;
+    --panel-2:#163524;
+    --line:rgba(201,162,39,0.20);
+    --line-soft:rgba(201,162,39,0.10);
+    --gold:#C9A227;
+    --gold-bright:#E3C567;
+    --ink:#ECE7D8;
+    --ink-soft:#9CB3A2;
+    --good:#7FB88A;
+    --bad:#D06A5C;
+    --warn:#D9A441;
+    --radius:14px;
+    --serif:'Amiri', serif;
+    --sans:'IBM Plex Sans Arabic', sans-serif;
+    --mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(201,162,39,0.08), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(127,184,138,0.06), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); min-height:100vh; padding-bottom:60px;
+  }
+  ::selection{ background:var(--gold); color:#0B1712; }
+  h1,h2,h3,.serif{ font-family:var(--serif); }
+  .num{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
+
+  header.top{
+    padding:28px 24px 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;
+    border-bottom:1px solid var(--line-soft); flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:16px; }
+  .brand h1{ font-size:26px; margin:0; color:var(--gold-bright); font-weight:700; letter-spacing:0.3px; }
+  .brand .sub{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .dial{ width:52px; height:52px; flex:0 0 auto; }
+  .pending-pill{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:10px 20px;
+    display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:15px;
+  }
+  .pending-pill .lbl{ font-family:var(--sans); font-size:12px; color:var(--ink-soft); }
+  .pending-pill b{ color:var(--gold-bright); font-size:18px; }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:26px 24px; display:grid; grid-template-columns:1fr; gap:22px; }
+  @media(min-width:980px){ .wrap{ grid-template-columns: 1.15fr 0.85fr; align-items:start; } }
+
+  .card{
+    background:linear-gradient(180deg, var(--panel), var(--bg-2));
+    border:1px solid var(--line); border-radius:var(--radius); padding:20px;
+  }
+  .card h2{ font-size:18px; margin:0 0 14px; color:var(--gold-bright); font-weight:700; display:flex; align-items:center; gap:8px; }
+  .card + .card{ margin-top:20px; }
+
+  .form-row{ display:grid; grid-template-columns:1fr; gap:12px; }
+  @media(min-width:640px){ .form-row.cols4{ grid-template-columns: 1.4fr 1fr 1fr 0.8fr; } }
+  label{ display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px; }
+  select, input{
+    width:100%; background:var(--bg-2); border:1px solid var(--line); color:var(--ink);
+    border-radius:9px; padding:10px 12px; font-size:14px; font-family:var(--sans); outline:none;
+  }
+  input[type=number], input.num-input{ font-family:var(--mono); }
+  select:focus, input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,162,39,0.12); }
+  .field{ display:flex; flex-direction:column; }
+
+  .btn{
+    border:none; border-radius:9px; padding:11px 18px; font-size:14px; font-weight:600; cursor:pointer;
+    font-family:var(--sans); transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:active{ transform:scale(0.97); }
+  .btn-gold{ background:linear-gradient(180deg, var(--gold-bright), var(--gold)); color:#1A1305; }
+  .btn-gold:hover{ filter:brightness(1.06); }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--ink); }
+  .btn-ghost:hover{ border-color:var(--gold); color:var(--gold-bright); }
+  .btn-danger{ background:transparent; border:1px solid rgba(208,106,92,0.4); color:var(--bad); }
+  .btn-block{ width:100%; }
+  .btn-sm{ padding:7px 12px; font-size:12.5px; }
+  .btn[disabled]{ opacity:0.4; cursor:not-allowed; }
+
+  .cat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:16px; }
+  @media(min-width:640px){ .cat-grid{ grid-template-columns:repeat(3,1fr); } }
+  .cat-card{ background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:12px; }
+  .cat-card .ic{ font-size:18px; }
+  .cat-card .lbl{ font-size:12px; color:var(--ink-soft); margin:6px 0 4px; }
+  .cat-card .amt{ font-family:var(--mono); font-size:16px; color:var(--gold-bright); }
+
+  .entry-list{ margin-top:16px; display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; }
+  .entry-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--panel-2); border:1px solid var(--line-soft); border-radius:9px; padding:10px 12px;
+  }
+  .entry-row .meta{ font-size:12.5px; color:var(--ink-soft); }
+  .entry-row .cat{ font-size:13.5px; color:var(--ink); font-weight:600; }
+  .entry-row .amt{ font-family:var(--mono); color:var(--gold-bright); font-size:15px; white-space:nowrap; }
+  .entry-empty{ text-align:center; color:var(--ink-soft); padding:30px 10px; font-size:13.5px; }
+  .del-btn{ background:none; border:none; color:var(--bad); cursor:pointer; font-size:16px; padding:2px 6px; }
+
+  .grand-bar{
+    display:flex; align-items:center; justify-content:space-between; margin-top:16px; padding:14px 16px;
+    background:var(--panel-2); border:1px solid var(--gold); border-radius:10px;
+  }
+  .grand-bar .lbl{ font-size:13px; color:var(--ink-soft); }
+  .grand-bar .val{ font-family:var(--mono); font-size:22px; color:var(--gold-bright); font-weight:700; }
+
+  .history-item{ border:1px solid var(--line-soft); border-radius:10px; margin-bottom:10px; overflow:hidden; }
+  .history-head{
+    display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer;
+    background:var(--panel-2);
+  }
+  .history-head:hover{ background:#1a3b28; }
+  .history-head .date{ font-weight:600; font-size:14px; }
+  .history-head .time{ font-size:11.5px; color:var(--ink-soft); margin-inline-start:6px; }
+  .history-head .total{ font-family:var(--mono); color:var(--gold-bright); font-size:15px; }
+  .history-body{ display:none; padding:12px 14px; background:var(--bg-2); }
+  .history-body.open{ display:block; }
+  .history-body .d-row{ display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px dashed var(--line-soft); }
+  .history-body .d-row:last-child{ border-bottom:none; }
+  .history-note{ margin-top:8px; font-size:12.5px; color:var(--ink-soft); font-style:italic; }
+  .history-empty{ text-align:center; color:var(--ink-soft); padding:30px 10px; font-size:13.5px; }
+
+  .filter-row{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .filter-row .field{ flex:1; min-width:120px; }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(4,10,7,0.72); display:none; align-items:center; justify-content:center;
+    z-index:100; padding:20px; backdrop-filter:blur(2px);
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background:linear-gradient(180deg, var(--panel), var(--bg-2)); border:1px solid var(--gold); border-radius:16px;
+    padding:26px; max-width:440px; width:100%; max-height:85vh; overflow-y:auto;
+  }
+  .modal h3{ margin:0 0 14px; color:var(--gold-bright); font-size:19px; }
+  .modal .d-row{ display:flex; justify-content:space-between; font-size:14px; padding:6px 0; border-bottom:1px dashed var(--line-soft); }
+  .modal .d-row.grand{ border-bottom:none; margin-top:8px; padding-top:10px; border-top:1px solid var(--gold); font-weight:700; font-size:16px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:var(--gold-bright); color:#1A1305; padding:12px 22px; border-radius:999px; font-weight:600;
+    font-size:14px; transition:all .25s ease; z-index:200; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .stamp-overlay{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:150;
+    background:rgba(4,10,7,0.55); pointer-events:none;
+  }
+  .stamp-overlay.show{ display:flex; }
+  .stamp{
+    width:180px; height:180px; border-radius:50%; border:5px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center;
+    color:var(--gold-bright); font-family:var(--serif); font-weight:700; font-size:19px; line-height:1.3;
+    transform:scale(0) rotate(-18deg); opacity:0; background:rgba(201,162,39,0.08);
+    box-shadow:0 0 40px rgba(201,162,39,0.35), inset 0 0 30px rgba(201,162,39,0.15);
+  }
+  .stamp.animate{ animation:stampIn .55s cubic-bezier(.2,1.4,.4,1) forwards; }
+  @keyframes stampIn{
+    0%{ transform:scale(0) rotate(-18deg); opacity:0; }
+    60%{ transform:scale(1.12) rotate(-4deg); opacity:1; }
+    100%{ transform:scale(1) rotate(-8deg); opacity:1; }
+  }
+  .empty-hint{ text-align:center; padding:40px 20px; color:var(--ink-soft); }
+  .empty-hint .ic{ font-size:30px; margin-bottom:10px; }
+
+  .footer-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+  a.file-link{ color:var(--gold-bright); }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <svg class="dial" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="46" fill="none" stroke="#C9A227" stroke-width="2" opacity="0.5"/>
+      <circle cx="50" cy="50" r="38" fill="none" stroke="#C9A227" stroke-width="1" opacity="0.35"/>
+      <g stroke="#C9A227" stroke-width="2" opacity="0.6">
+        <line x1="50" y1="6" x2="50" y2="14"/>
+        <line x1="50" y1="86" x2="50" y2="94"/>
+        <line x1="6" y1="50" x2="14" y2="50"/>
+        <line x1="86" y1="50" x2="94" y2="50"/>
+      </g>
+      <line x1="50" y1="50" x2="50" y2="20" stroke="#E3C567" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="4" fill="#E3C567"/>
+    </svg>
+    <div>
+      <h1>خزنة الكاش اليومي</h1>
+      <div class="sub">تحصيل الجامعة — بزنس · كمبيوتر ساينس · هندسة · الشركة · الجمعية · التيست</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="pending-pill">
+      <span class="lbl">معلّق لسه:</span>
+      <b class="num" id="headerPending">0</b>
+      <span class="lbl">ج.م</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="openSyncModal()" id="syncBtn">☁️ الاتصال</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- MAIN COLUMN -->
+  <div>
+    <div class="card">
+      <h2>💵 تسجيل مبلغ جديد</h2>
+      <div class="form-row cols4">
+        <div class="field">
+          <label>البند</label>
+          <select id="f_category"></select>
+        </div>
+        <div class="field">
+          <label>المبلغ (ج.م)</label>
+          <input id="f_amount" type="number" min="0" placeholder="0" class="num-input">
+        </div>
+        <div class="field">
+          <label>التاريخ</label>
+          <input id="f_date" type="date">
+        </div>
+        <div class="field" style="justify-content:flex-end;">
+          <button class="btn btn-gold btn-block" onclick="addEntry()">+ إضافة</button>
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>ملاحظة (اختياري)</label>
+        <input id="f_note" placeholder="مثال: اسم الطالب أو تفاصيل سريعة">
+      </div>
+
+      <div class="cat-grid" id="catGrid"></div>
+
+      <div class="grand-bar">
+        <span class="lbl">إجمالي المعلّق (لسه معايا)</span>
+        <span class="val num" id="grandPending">0 ج.م</span>
+      </div>
+
+      <div class="entry-list" id="entryList"></div>
+
+      <button class="btn btn-gold btn-block" style="margin-top:16px;" id="handoverBtn" onclick="openHandoverModal()">🔒 تسليم الخزنة</button>
+    </div>
+  </div>
+
+  <!-- SIDE COLUMN -->
+  <div>
+    <div class="card">
+      <h2>📜 سجل التسليمات</h2>
+      <div class="filter-row">
+        <div class="field"><label>من تاريخ</label><input id="filterFrom" type="date"></div>
+        <div class="field"><label>إلى تاريخ</label><input id="filterTo" type="date"></div>
+      </div>
+      <div id="historyList"></div>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ نسخ احتياطي وتصدير</h2>
+      <div class="footer-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openExportModal()">📊 تصدير إكسل</button>
+        <button class="btn btn-ghost btn-sm" onclick="downloadBackup()">⬇️ نسخة احتياطية</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('restoreFile').click()">⬆️ استعادة نسخة</button>
+        <input type="file" id="restoreFile" accept="application/json" style="display:none;" onchange="restoreBackup(event)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Handover confirm modal -->
+<div class="overlay" id="handoverOverlay">
+  <div class="modal">
+    <h3>تأكيد تسليم الخزنة</h3>
+    <div id="handoverBreakdown"></div>
+    <div class="field" style="margin-top:14px;">
+      <label>ملاحظة على التسليم (اختياري)</label>
+      <input id="handoverNote" placeholder="مثال: اتسلم للأستاذ / في الخزنة الرئيسية">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" onclick="closeHandoverModal()">إلغاء</button>
+      <button class="btn btn-gold btn-block" onclick="confirmHandover()">تأكيد التسليم</button>
+    </div>
+  </div>
+</div>
+
+<div class="stamp-overlay" id="stampOverlay">
+  <div class="stamp" id="stampEl">تم التسليم<br>✓</div>
+</div>
+
+<div class="overlay" id="syncOverlay">
+  <div class="modal" style="max-width:520px;">
+    <h3>☁️ ربط جوجل شيت (نسخة سحابية)</h3>
+    <div style="font-size:13px;color:var(--ink-soft);line-height:1.9;margin-bottom:14px;">
+      من غير ربط، البيانات بتتخزن على المتصفح بس. اربط جوجل شيت عشان البيانات تتحفظ سحابيًا وتفتح نفس البيانات من أي جهاز.
+      <ol style="padding-inline-start:18px; margin:10px 0;">
+        <li>افتح Google Sheet جديد فاضي.</li>
+        <li>من القائمة: Extensions ← Apps Script.</li>
+        <li>امسح أي كود موجود، والصق كود Apps Script اللي معاك (نزّلته منفصل).</li>
+        <li>Deploy ← New deployment ← Type: Web app ← Execute as: Me ← Who has access: Anyone.</li>
+        <li>اضغط Deploy وانسخ الرابط اللي يخلص بـ <span class="num">/exec</span> وحطه هنا تحت.</li>
+      </ol>
+    </div>
+    <div class="field">
+      <label>رابط Google Apps Script (/exec)</label>
+      <input id="syncUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" onclick="closeSyncModal()">إلغاء</button>
+      <button class="btn btn-gold btn-block" onclick="saveSyncUrl()">حفظ وربط</button>
+    </div>
+    <div id="syncStatusMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
+  </div>
+</div>
+
+<div class="overlay" id="exportOverlay">
+  <div class="modal" style="max-width:440px;">
+    <h3>📊 تصدير إكسل</h3>
+    <div class="field">
+      <label>من تاريخ (سيب فاضي = من الأول)</label>
+      <input id="exportFrom" type="date">
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label>إلى تاريخ (سيب فاضي = لحد النهاردة)</label>
+      <input id="exportTo" type="date">
+    </div>
+    <div class="footer-actions" style="margin-top:10px;">
+      <button class="btn btn-ghost btn-sm" onclick="setExportRange('today')">النهاردة</button>
+      <button class="btn btn-ghost btn-sm" onclick="setExportRange('week')">آخر 7 أيام</button>
+      <button class="btn btn-ghost btn-sm" onclick="setExportRange('month')">الشهر ده</button>
+      <button class="btn btn-ghost btn-sm" onclick="setExportRange('all')">كل الفترات</button>
+    </div>
+    <div style="margin-top:14px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);">
+        <input type="checkbox" id="exportIncludeHandovers" checked style="width:auto;"> ورقة التسليمات
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);margin-top:6px;">
+        <input type="checkbox" id="exportIncludeEntries" checked style="width:auto;"> ورقة كل الحركات (تفصيلي)
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" onclick="closeExportModal()">إلغاء</button>
+      <button class="btn btn-gold btn-block" onclick="exportExcelReport()">تنزيل</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CATEGORIES = [
+  {key:'business', label:'معهد - بزنس', icon:'💼'},
+  {key:'cs', label:'معهد - كمبيوتر ساينس', icon:'💻'},
+  {key:'engineering', label:'معهد - هندسة', icon:'⚙️'},
+  {key:'company', label:'الشركة', icon:'🏢'},
+  {key:'association', label:'الجمعية', icon:'🤝'},
+  {key:'test', label:'رسوم التيست', icon:'📝'},
+];
+const STORAGE_KEY = 'cic_cash_treasury_v1';
+const SYNC_URL_KEY = 'cash_treasury_sync_url';
+
+let data = { entries: [], handovers: [] };
+
+function uid(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function fmt(n){ return Math.round(Number(n)||0).toLocaleString('en-US'); }
+function todayStr(){ return localDateStr(new Date()); }
+function localDateStr(d){
+  const dt = (d instanceof Date) ? d : new Date(d);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth()+1).padStart(2,'0');
+  const day = String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function catLabel(key){ const c=CATEGORIES.find(c=>c.key===key); return c?c.label:key; }
+function catIcon(key){ const c=CATEGORIES.find(c=>c.key===key); return c?c.icon:'💰'; }
+
+function getSyncUrl(){ try{ return localStorage.getItem(SYNC_URL_KEY)||''; }catch(e){ return ''; } }
+function isSyncConfigured(){ const u=getSyncUrl(); return !!(u && u.indexOf('http')===0); }
+
+const LocalOnlyStore = {
+  async get(key){ try{ const value = localStorage.getItem(key); return value===null ? null : { key, value }; }catch(e){ return null; } },
+  async set(key, value){ try{ localStorage.setItem(key, value); return { key, value }; }catch(e){ return null; } }
+};
+const SheetSyncStore = {
+  async _call(payload){
+    try{
+      const res = await fetch(getSyncUrl(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
+      if(!res.ok) return null;
+      return await res.json();
+    }catch(e){ return null; }
+  },
+  async get(key){ const result = await this._call({ action:'get', key }); if(!result || result.value===undefined || result.value===null) return null; return { key, value: result.value }; },
+  async set(key, value){ const result = await this._call({ action:'set', key, value }); return result ? { key, value } : null; }
+};
+function getStore(){ return isSyncConfigured() ? SheetSyncStore : LocalOnlyStore; }
+
+async function loadData(){
+  try{
+    const result = await getStore().get(STORAGE_KEY);
+    if(result && result.value){ const parsed = JSON.parse(result.value); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; }
+    else if(isSyncConfigured()){
+      // sheet configured but empty — try local as a one-time fallback/migration
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw){ const parsed = JSON.parse(raw); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; await saveData(); }
+    }
+  }catch(e){ console.error('load error', e); }
+  updateSyncBtn();
+}
+async function saveData(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); // always keep a local copy too
+    if(isSyncConfigured()){
+      const result = await getStore().set(STORAGE_KEY, JSON.stringify(data));
+      if(!result){ showToast('تعذّر الحفظ على جوجل شيت — البيانات محفوظة محليًا بس دلوقتي'); }
+    }
+  }catch(e){ showToast('فشل الحفظ — جرب تصدير نسخة احتياطية'); console.error(e); }
+}
+
+function pendingEntries(){ return data.entries.filter(e=>!e.handoverId); }
+function categoryTotals(list){
+  const t={}; CATEGORIES.forEach(c=>t[c.key]=0);
+  list.forEach(e=>{ t[e.category]=(t[e.category]||0)+Number(e.amount); });
+  return t;
+}
+function grandTotal(list){ return list.reduce((a,e)=>a+Number(e.amount),0); }
+
+function populateCategorySelect(){
+  const sel=document.getElementById('f_category');
+  sel.innerHTML = CATEGORIES.map(c=>`<option value="${c.key}">${c.icon} ${c.label}</option>`).join('');
+}
+
+function updateSyncBtn(){
+  const btn=document.getElementById('syncBtn');
+  btn.textContent = isSyncConfigured() ? '☁️ متصل بجوجل شيت' : '☁️ الاتصال';
+  btn.style.color = isSyncConfigured() ? 'var(--good)' : '';
+  btn.style.borderColor = isSyncConfigured() ? 'var(--good)' : '';
+}
+function openSyncModal(){
+  document.getElementById('syncUrlInput').value = getSyncUrl();
+  document.getElementById('syncStatusMsg').textContent='';
+  document.getElementById('syncOverlay').classList.add('open');
+}
+function closeSyncModal(){ document.getElementById('syncOverlay').classList.remove('open'); }
+async function saveSyncUrl(){
+  const url = document.getElementById('syncUrlInput').value.trim();
+  if(url && url.indexOf('http')!==0){ showToast('الرابط لازم يبدأ بـ https'); return; }
+  document.getElementById('syncStatusMsg').textContent='بيتأكد من الاتصال...';
+  try{ localStorage.setItem(SYNC_URL_KEY, url); }catch(e){}
+  if(url){
+    const result = await SheetSyncStore.get(STORAGE_KEY);
+    if(result===null){
+      // could genuinely be empty sheet — try a set to confirm connectivity
+      const testSet = await SheetSyncStore.set(STORAGE_KEY, JSON.stringify(data));
+      if(!testSet){
+        document.getElementById('syncStatusMsg').textContent='مش قادر يوصل للرابط ده. تأكد إن الـ Deployment نوعه Web app والوصول Anyone.';
+        return;
+      }
+    }
+  }
+  updateSyncBtn();
+  await loadData();
+  render();
+  closeSyncModal();
+  showToast(url ? 'تم الربط بنجاح' : 'تم إلغاء الربط — البيانات محلية بس دلوقتي');
+}
+
+async function addEntry(){
+  const category=document.getElementById('f_category').value;
+  const amount=Number(document.getElementById('f_amount').value)||0;
+  const date=document.getElementById('f_date').value || todayStr();
+  const note=document.getElementById('f_note').value.trim();
+  if(amount<=0){ showToast('اكتب مبلغ أكبر من صفر'); return; }
+  data.entries.push({ id:uid(), date, category, amount, note, createdAt:new Date().toISOString(), handoverId:null });
+  await saveData();
+  document.getElementById('f_amount').value='';
+  document.getElementById('f_note').value='';
+  document.getElementById('f_amount').focus();
+  render();
+  showToast('تم تسجيل المبلغ');
+}
+
+async function deleteEntry(id){
+  if(!confirm('حذف المبلغ ده؟')) return;
+  data.entries = data.entries.filter(e=>e.id!==id);
+  await saveData(); render();
+}
+
+function renderCatGrid(){
+  const pending = pendingEntries();
+  const totals = categoryTotals(pending);
+  document.getElementById('catGrid').innerHTML = CATEGORIES.map(c=>`
+    <div class="cat-card">
+      <span class="ic">${c.icon}</span>
+      <div class="lbl">${c.label}</div>
+      <div class="amt num">${fmt(totals[c.key])} ج.م</div>
+    </div>
+  `).join('');
+}
+
+function renderEntryList(){
+  const pending = pendingEntries().slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+  const list=document.getElementById('entryList');
+  if(pending.length===0){
+    list.innerHTML='<div class="entry-empty">مفيش مبالغ معلّقة حاليًا — سجّل أول مبلغ فوق</div>';
+    return;
+  }
+  list.innerHTML = pending.map(e=>`
+    <div class="entry-row">
+      <div>
+        <div class="cat">${catIcon(e.category)} ${catLabel(e.category)}</div>
+        <div class="meta">${e.date}${e.note?' · '+escapeHtml(e.note):''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="amt num">${fmt(e.amount)} ج.م</span>
+        <button class="del-btn" onclick="deleteEntry('${e.id}')" title="حذف">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderGrandBar(){
+  const total = grandTotal(pendingEntries());
+  document.getElementById('grandPending').textContent = fmt(total)+' ج.م';
+  document.getElementById('headerPending').textContent = fmt(total);
+  document.getElementById('handoverBtn').disabled = total<=0;
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+let openHistoryIds = new Set();
+function renderHistory(){
+  const from = document.getElementById('filterFrom').value;
+  const to = document.getElementById('filterTo').value;
+  let list = data.handovers.slice().sort((a,b)=> new Date(b.handedOverAt)-new Date(a.handedOverAt));
+  if(from) list = list.filter(h=>localDateStr(h.handedOverAt) >= from);
+  if(to) list = list.filter(h=>localDateStr(h.handedOverAt) <= to);
+  const el=document.getElementById('historyList');
+  if(list.length===0){ el.innerHTML='<div class="history-empty">مفيش تسليمات مسجلة لسه</div>'; return; }
+  el.innerHTML = list.map(h=>{
+    const dt = new Date(h.handedOverAt);
+    const dateStr = dt.toLocaleDateString('ar-EG');
+    const timeStr = dt.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
+    const isOpen = openHistoryIds.has(h.id);
+    const rows = CATEGORIES.map(c=> h.totals[c.key]>0 ? `<div class="d-row"><span>${c.icon} ${c.label}</span><span class="num">${fmt(h.totals[c.key])} ج.م</span></div>` : '').join('');
+    return `
+    <div class="history-item">
+      <div class="history-head" onclick="toggleHistory('${h.id}')">
+        <span><span class="date">${dateStr}</span><span class="time">${timeStr}</span></span>
+        <span class="total num">${fmt(h.total)} ج.م</span>
+      </div>
+      <div class="history-body ${isOpen?'open':''}" id="hbody-${h.id}">
+        ${rows}
+        ${h.note ? `<div class="history-note">"${escapeHtml(h.note)}"</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function toggleHistory(id){
+  if(openHistoryIds.has(id)) openHistoryIds.delete(id); else openHistoryIds.add(id);
+  renderHistory();
+}
+
+function render(){
+  renderCatGrid();
+  renderEntryList();
+  renderGrandBar();
+  renderHistory();
+}
+
+function openHandoverModal(){
+  const pending = pendingEntries();
+  if(pending.length===0){ showToast('مفيش مبالغ معلّقة للتسليم'); return; }
+  const totals = categoryTotals(pending);
+  const total = grandTotal(pending);
+  const rows = CATEGORIES.map(c=> totals[c.key]>0 ? `<div class="d-row"><span>${c.icon} ${c.label}</span><span class="num">${fmt(totals[c.key])} ج.م</span></div>` : '').join('');
+  document.getElementById('handoverBreakdown').innerHTML = rows + `<div class="d-row grand"><span>الإجمالي</span><span class="num">${fmt(total)} ج.م</span></div>`;
+  document.getElementById('handoverNote').value='';
+  document.getElementById('handoverOverlay').classList.add('open');
+}
+function closeHandoverModal(){ document.getElementById('handoverOverlay').classList.remove('open'); }
+
+async function confirmHandover(){
+  const pending = pendingEntries();
+  if(pending.length===0){ closeHandoverModal(); return; }
+  const id=uid();
+  const totals=categoryTotals(pending);
+  const total=grandTotal(pending);
+  const note=document.getElementById('handoverNote').value.trim();
+  data.handovers.push({ id, handedOverAt:new Date().toISOString(), totals, total, note, entryIds:pending.map(e=>e.id) });
+  pending.forEach(e=>e.handoverId=id);
+  await saveData();
+  closeHandoverModal();
+  render();
+  playStamp();
+}
+
+function playStamp(){
+  const overlay=document.getElementById('stampOverlay');
+  const stamp=document.getElementById('stampEl');
+  overlay.classList.add('show');
+  stamp.classList.remove('animate'); void stamp.offsetWidth; stamp.classList.add('animate');
+  setTimeout(()=>{ overlay.classList.remove('show'); }, 1300);
+}
+
+let toastTimer=null;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+function openExportModal(){
+  document.getElementById('exportFrom').value='';
+  document.getElementById('exportTo').value='';
+  document.getElementById('exportIncludeHandovers').checked=true;
+  document.getElementById('exportIncludeEntries').checked=true;
+  document.getElementById('exportOverlay').classList.add('open');
+}
+function closeExportModal(){ document.getElementById('exportOverlay').classList.remove('open'); }
+function setExportRange(range){
+  const today = todayStr();
+  if(range==='today'){ document.getElementById('exportFrom').value=today; document.getElementById('exportTo').value=today; }
+  else if(range==='week'){ const d=new Date(); d.setDate(d.getDate()-6); document.getElementById('exportFrom').value=localDateStr(d); document.getElementById('exportTo').value=today; }
+  else if(range==='month'){ const d=new Date(); d.setDate(1); document.getElementById('exportFrom').value=localDateStr(d); document.getElementById('exportTo').value=today; }
+  else if(range==='all'){ document.getElementById('exportFrom').value=''; document.getElementById('exportTo').value=''; }
+}
+
+async function exportExcelReport(){
+  if(typeof ExcelJS==='undefined'){ showToast('مكتبة الإكسل لسه بتحمّل، جرب تاني بعد شوية'); return; }
+  const from = document.getElementById('exportFrom').value;
+  const to = document.getElementById('exportTo').value;
+  const includeHandovers = document.getElementById('exportIncludeHandovers').checked;
+  const includeEntries = document.getElementById('exportIncludeEntries').checked;
+  if(!includeHandovers && !includeEntries){ showToast('اختار ورقة واحدة على الأقل'); return; }
+
+  const handoversInRange = data.handovers.filter(h=>{
+    const d = localDateStr(h.handedOverAt);
+    if(from && d<from) return false;
+    if(to && d>to) return false;
+    return true;
+  });
+  const entriesInRange = data.entries.filter(e=>{
+    if(from && e.date<from) return false;
+    if(to && e.date>to) return false;
+    return true;
+  });
+
+  const wb = new ExcelJS.Workbook();
+  const sheets = [];
+
+  if(includeHandovers){
+    const ws1 = wb.addWorksheet('Handovers');
+    ws1.columns = [
+      {header:'Date', key:'date', width:14},
+      {header:'Time', key:'time', width:10},
+      ...CATEGORIES.map(c=>({header:c.label, key:c.key, width:18})),
+      {header:'Total', key:'total', width:14},
+      {header:'Note', key:'note', width:30},
+    ];
+    handoversInRange.slice().sort((a,b)=> new Date(a.handedOverAt)-new Date(b.handedOverAt)).forEach(h=>{
+      const dt=new Date(h.handedOverAt);
+      const row={ date: localDateStr(dt), time: dt.toTimeString().slice(0,5), total: h.total, note: h.note||'' };
+      CATEGORIES.forEach(c=>{ row[c.key]=h.totals[c.key]||0; });
+      ws1.addRow(row);
+    });
+    sheets.push(ws1);
+  }
+
+  if(includeEntries){
+    const ws2 = wb.addWorksheet('Entries');
+    ws2.columns = [
+      {header:'Date', key:'date', width:14},
+      {header:'Category', key:'category', width:22},
+      {header:'Amount', key:'amount', width:14},
+      {header:'Note', key:'note', width:26},
+      {header:'Status', key:'status', width:14},
+      {header:'Recorded At', key:'createdAt', width:20},
+    ];
+    entriesInRange.slice().sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt)).forEach(e=>{
+      ws2.addRow({ date:e.date, category:catLabel(e.category), amount:e.amount, note:e.note||'', status: e.handoverId?'Handed over':'Pending', createdAt: e.createdAt.slice(0,16).replace('T',' ') });
+    });
+    sheets.push(ws2);
+  }
+
+  if(handoversInRange.length===0 && entriesInRange.length===0){ showToast('مفيش بيانات في الفترة دي'); return; }
+
+  sheets.forEach(ws=>{
+    const headerRow=ws.getRow(1);
+    headerRow.eachCell(cell=>{
+      cell.fill={ type:'pattern', pattern:'solid', fgColor:{argb:'FF122A1F'} };
+      cell.font={ color:{argb:'FFE3C567'}, bold:true, size:11 };
+      cell.alignment={ horizontal:'center', vertical:'middle' };
+    });
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const rangeTag = (from||to) ? `${from||'start'}_to_${to||todayStr()}` : 'all';
+  a.href=url; a.download=`cash-treasury-${rangeTag}.xlsx`; a.click();
+  URL.revokeObjectURL(url);
+  closeExportModal();
+  showToast('تم تنزيل الملف');
+}
+
+function downloadBackup(){
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`cash-treasury-backup-${todayStr()}.json`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('تم تنزيل النسخة الاحتياطية');
+}
+function restoreBackup(evt){
+  const file = evt.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed.entries || !parsed.handovers){ showToast('الملف مش بصيغة صحيحة'); return; }
+      if(!confirm('استعادة النسخة دي هتستبدل البيانات الحالية بالكامل. متأكد؟')) return;
+      data = parsed;
+      await saveData(); render();
+      showToast('تم استعادة النسخة بنجاح');
+    }catch(e){ showToast('فشل قراءة الملف'); console.error(e); }
+  };
+  reader.readAsText(file);
+  evt.target.value='';
+}
+
+document.getElementById('filterFrom').addEventListener('change', renderHistory);
+document.getElementById('filterTo').addEventListener('change', renderHistory);
+
+populateCategorySelect();
+let lastAutoDate = todayStr();
+document.getElementById('f_date').value = lastAutoDate;
+setInterval(()=>{
+  const nowToday = todayStr();
+  if(nowToday !== lastAutoDate){
+    const fDate = document.getElementById('f_date');
+    // only auto-advance if the field still shows the date we auto-set (user hasn't manually picked another day)
+    if(fDate.value === lastAutoDate){ fDate.value = nowToday; }
+    lastAutoDate = nowToday;
+  }
+}, 60000);
+updateSyncBtn();
+loadData().then(render);
+</script>
+</body>
+</html>
