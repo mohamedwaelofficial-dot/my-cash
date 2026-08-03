@@ -412,14 +412,38 @@ async function loadData(){
   }catch(e){ console.error('load error', e); }
   updateSyncBtn();
 }
+let syncTimer = null;
+let syncInFlight = false;
+let syncPendingAgain = false;
+
 async function saveData(){
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); // always keep a local copy too
-    if(isSyncConfigured()){
-      const result = await getStore().set(STORAGE_KEY, JSON.stringify(data));
-      if(!result){ showToast('تعذّر الحفظ على جوجل شيت — البيانات محفوظة محليًا بس دلوقتي'); }
-    }
-  }catch(e){ showToast('فشل الحفظ — جرب تصدير نسخة احتياطية'); console.error(e); }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); // instant local save — UI never waits on this
+  }catch(e){ showToast('فشل الحفظ محليًا — جرب تصدير نسخة احتياطية'); console.error(e); return; }
+  if(isSyncConfigured()) scheduleCloudSync();
+}
+function scheduleCloudSync(){
+  clearTimeout(syncTimer);
+  setSyncIndicator('pending');
+  syncTimer = setTimeout(runCloudSync, 700);
+}
+async function runCloudSync(){
+  if(syncInFlight){ syncPendingAgain = true; return; }
+  syncInFlight = true;
+  setSyncIndicator('saving');
+  const snapshot = JSON.stringify(data);
+  const result = await getStore().set(STORAGE_KEY, snapshot);
+  syncInFlight = false;
+  if(!result){ setSyncIndicator('error'); showToast('تعذّر الحفظ على جوجل شيت — البيانات محفوظة محليًا بس دلوقتي'); }
+  else{ setSyncIndicator('saved'); }
+  if(syncPendingAgain){ syncPendingAgain=false; scheduleCloudSync(); }
+}
+function setSyncIndicator(state){
+  const btn=document.getElementById('syncBtn');
+  if(!isSyncConfigured()){ btn.textContent='☁️ الاتصال'; return; }
+  if(state==='pending' || state==='saving'){ btn.textContent='☁️ بيتزامن...'; }
+  else if(state==='error'){ btn.textContent='⚠️ فشل التزامن'; }
+  else{ btn.textContent='☁️ متصل بجوجل شيت'; }
 }
 
 function pendingEntries(){ return data.entries.filter(e=>!e.handoverId); }
