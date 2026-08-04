@@ -581,6 +581,10 @@ function renderHistory(){
       <div class="history-body ${isOpen?'open':''}" id="hbody-${h.id}">
         ${rows}
         ${h.note ? `<div class="history-note">"${escapeHtml(h.note)}"</div>` : ''}
+        <div class="footer-actions" style="margin-top:12px;">
+          <button class="btn btn-ghost btn-sm" onclick="editHandover('${h.id}')">✏️ تعديل (يرجّعه معلّق)</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteHandover('${h.id}')">🗑️ حذف نهائي</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -588,6 +592,23 @@ function renderHistory(){
 function toggleHistory(id){
   if(openHistoryIds.has(id)) openHistoryIds.delete(id); else openHistoryIds.add(id);
   renderHistory();
+}
+async function editHandover(id){
+  const h = data.handovers.find(x=>x.id===id); if(!h) return;
+  if(!confirm('هيرجّع كل مبالغ التسليم ده لقائمة "المعلّق" فوق عشان تعدّل فيها براحتك، وتقدر تسلّمها تاني بعد كده. تكمل؟')) return;
+  data.entries.forEach(e=>{ if(e.handoverId===id) e.handoverId=null; });
+  data.handovers = data.handovers.filter(x=>x.id!==id);
+  await saveData();
+  render();
+  showToast('رجعت المبالغ للقائمة المعلّقة — عدّل واضغط تسليم الخزنة تاني');
+}
+async function deleteHandover(id){
+  if(!confirm('حذف التسليم ده نهائيًا هيمسح معاه كل المبالغ اللي كانت جواه، والعملية دي مش هترجع. متأكد؟')) return;
+  data.entries = data.entries.filter(e=>e.handoverId!==id);
+  data.handovers = data.handovers.filter(x=>x.id!==id);
+  await saveData();
+  render();
+  showToast('تم حذف التسليم نهائيًا');
 }
 
 function render(){
