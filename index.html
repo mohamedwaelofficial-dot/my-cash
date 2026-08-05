@@ -3,210 +3,226 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>خزنة الكاش اليومي</title>
+<title>خزنة الكاش — Mohamed Wael</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <style>
   :root{
-    --bg:#0B1712;
-    --bg-2:#0F1E17;
-    --panel:#122A1F;
-    --panel-2:#163524;
-    --line:rgba(201,162,39,0.20);
-    --line-soft:rgba(201,162,39,0.10);
-    --gold:#C9A227;
-    --gold-bright:#E3C567;
-    --ink:#ECE7D8;
-    --ink-soft:#9CB3A2;
-    --good:#7FB88A;
-    --bad:#D06A5C;
-    --warn:#D9A441;
-    --radius:14px;
-    --serif:'Amiri', serif;
-    --sans:'IBM Plex Sans Arabic', sans-serif;
+    --bg:#0A0A0C;
+    --bg-2:#101014;
+    --panel:#15151A;
+    --panel-2:#1B1B21;
+    --line:rgba(212,175,55,0.14);
+    --line-strong:rgba(212,175,55,0.30);
+    --gold:#D4AF37;
+    --gold-bright:#F0D584;
+    --ink:#F3F1EA;
+    --ink-soft:#8E8A80;
+    --ink-faint:#5C5952;
+    --good:#6FCB9F;
+    --bad:#E2685C;
+    --radius:18px;
+    --radius-sm:11px;
+    --display:'Cormorant Garamond', serif;
+    --sans:'Cairo', sans-serif;
     --mono:'IBM Plex Mono', monospace;
+    --shadow: 0 14px 40px rgba(0,0,0,0.45);
   }
   *{box-sizing:border-box;}
   body{
     margin:0; background:
-      radial-gradient(1200px 600px at 15% -10%, rgba(201,162,39,0.08), transparent 60%),
-      radial-gradient(900px 500px at 100% 0%, rgba(127,184,138,0.06), transparent 55%),
+      radial-gradient(1000px 500px at 12% -8%, rgba(212,175,55,0.055), transparent 60%),
+      radial-gradient(800px 460px at 100% 4%, rgba(212,175,55,0.035), transparent 55%),
       var(--bg);
-    color:var(--ink); font-family:var(--sans); min-height:100vh; padding-bottom:60px;
+    color:var(--ink); font-family:var(--sans); min-height:100vh; padding-bottom:70px;
+    -webkit-font-smoothing:antialiased;
   }
-  ::selection{ background:var(--gold); color:#0B1712; }
-  h1,h2,h3,.serif{ font-family:var(--serif); }
+  ::selection{ background:var(--gold); color:#0A0A0C; }
   .num{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
 
+  /* ---- Header ---- */
   header.top{
-    padding:28px 24px 20px; display:flex; align-items:center; justify-content:space-between; gap:20px;
-    border-bottom:1px solid var(--line-soft); flex-wrap:wrap;
+    padding:30px 28px 24px; display:flex; align-items:center; justify-content:space-between; gap:20px;
+    border-bottom:1px solid var(--line); flex-wrap:wrap;
   }
   .brand{ display:flex; align-items:center; gap:16px; }
-  .brand h1{ font-size:26px; margin:0; color:var(--gold-bright); font-weight:700; letter-spacing:0.3px; }
-  .brand .sub{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
-  .dial{ width:52px; height:52px; flex:0 0 auto; }
-  .pending-pill{
-    background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:10px 20px;
-    display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:15px;
+  .monogram{
+    width:50px; height:50px; border-radius:50%; border:1.5px solid var(--gold);
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+    font-family:var(--display); font-weight:700; font-size:19px; color:var(--gold-bright);
+    background:radial-gradient(circle at 35% 30%, rgba(212,175,55,0.14), transparent 70%);
+    letter-spacing:0.5px;
   }
-  .pending-pill .lbl{ font-family:var(--sans); font-size:12px; color:var(--ink-soft); }
-  .pending-pill b{ color:var(--gold-bright); font-size:18px; }
+  .brand h1{ font-family:var(--sans); font-size:19px; margin:0; color:var(--ink); font-weight:700; letter-spacing:0.2px; }
+  .brand .owner{ font-size:11px; color:var(--gold-bright); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:3px; font-weight:600; }
 
-  .wrap{ max-width:1180px; margin:0 auto; padding:26px 24px; display:grid; grid-template-columns:1fr; gap:22px; }
+  .header-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .pending-pill{
+    background:var(--panel); border:1px solid var(--line-strong); border-radius:999px; padding:10px 22px;
+    display:flex; align-items:center; gap:9px; font-size:14px;
+  }
+  .pending-pill .lbl{ font-size:11.5px; color:var(--ink-soft); }
+  .pending-pill b{ color:var(--gold-bright); font-size:17px; }
+
+  .wrap{ max-width:1200px; margin:0 auto; padding:28px 28px; display:grid; grid-template-columns:1fr; gap:24px; }
   @media(min-width:980px){ .wrap{ grid-template-columns: 1.15fr 0.85fr; align-items:start; } }
 
   .card{
-    background:linear-gradient(180deg, var(--panel), var(--bg-2));
-    border:1px solid var(--line); border-radius:var(--radius); padding:20px;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:24px;
+    box-shadow:var(--shadow);
   }
-  .card h2{ font-size:18px; margin:0 0 14px; color:var(--gold-bright); font-weight:700; display:flex; align-items:center; gap:8px; }
-  .card + .card{ margin-top:20px; }
+  .card h2{ font-size:15px; margin:0 0 18px; color:var(--ink); font-weight:700; display:flex; align-items:center; gap:9px;
+    text-transform:uppercase; letter-spacing:0.6px; }
+  .card h2 .ic{ font-size:16px; }
+  .card + .card{ margin-top:22px; }
 
-  .form-row{ display:grid; grid-template-columns:1fr; gap:12px; }
-  @media(min-width:640px){ .form-row.cols4{ grid-template-columns: 1.4fr 1fr 1fr 0.8fr; } }
-  label{ display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px; }
+  .form-row{ display:grid; grid-template-columns:1fr; gap:13px; }
+  @media(min-width:640px){ .form-row.cols4{ grid-template-columns: 1.5fr 1fr 1fr 0.85fr; } }
+  label{ display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:600; }
   select, input{
     width:100%; background:var(--bg-2); border:1px solid var(--line); color:var(--ink);
-    border-radius:9px; padding:10px 12px; font-size:14px; font-family:var(--sans); outline:none;
+    border-radius:var(--radius-sm); padding:11px 13px; font-size:14px; font-family:var(--sans); outline:none;
   }
   input[type=number], input.num-input{ font-family:var(--mono); }
-  select:focus, input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,162,39,0.12); }
+  select:focus, input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(212,175,55,0.10); }
   .field{ display:flex; flex-direction:column; }
 
   .btn{
-    border:none; border-radius:9px; padding:11px 18px; font-size:14px; font-weight:600; cursor:pointer;
-    font-family:var(--sans); transition:transform .12s ease, filter .12s ease;
+    border:none; border-radius:var(--radius-sm); padding:12px 20px; font-size:13.5px; font-weight:700; cursor:pointer;
+    font-family:var(--sans); transition:transform .12s ease, filter .12s ease, opacity .12s ease;
   }
   .btn:active{ transform:scale(0.97); }
   .btn-gold{ background:linear-gradient(180deg, var(--gold-bright), var(--gold)); color:#1A1305; }
-  .btn-gold:hover{ filter:brightness(1.06); }
-  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--ink); }
+  .btn-gold:hover{ filter:brightness(1.08); }
+  .btn-ghost{ background:transparent; border:1px solid var(--line-strong); color:var(--ink); }
   .btn-ghost:hover{ border-color:var(--gold); color:var(--gold-bright); }
-  .btn-danger{ background:transparent; border:1px solid rgba(208,106,92,0.4); color:var(--bad); }
+  .btn-danger{ background:transparent; border:1px solid rgba(226,104,92,0.4); color:var(--bad); }
   .btn-block{ width:100%; }
-  .btn-sm{ padding:7px 12px; font-size:12.5px; }
-  .btn[disabled]{ opacity:0.4; cursor:not-allowed; }
+  .btn-sm{ padding:8px 14px; font-size:12px; }
+  .btn-icon{ padding:8px 10px; font-size:13px; }
+  .btn[disabled]{ opacity:0.35; cursor:not-allowed; }
 
-  .cat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:16px; }
+  .cat-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:18px; }
   @media(min-width:640px){ .cat-grid{ grid-template-columns:repeat(3,1fr); } }
-  .cat-card{ background:var(--panel-2); border:1px solid var(--line-soft); border-radius:10px; padding:12px; }
-  .cat-card .ic{ font-size:18px; }
-  .cat-card .lbl{ font-size:12px; color:var(--ink-soft); margin:6px 0 4px; }
-  .cat-card .amt{ font-family:var(--mono); font-size:16px; color:var(--gold-bright); }
+  .cat-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius-sm); padding:13px; }
+  .cat-card .ic{ font-size:17px; }
+  .cat-card .lbl{ font-size:11.5px; color:var(--ink-soft); margin:7px 0 4px; font-weight:600; }
+  .cat-card .amt{ font-size:16px; color:var(--gold-bright); }
 
-  .entry-list{ margin-top:16px; display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; }
+  .entry-list{ margin-top:18px; display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; }
   .entry-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
-    background:var(--panel-2); border:1px solid var(--line-soft); border-radius:9px; padding:10px 12px;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius-sm); padding:11px 13px;
   }
-  .entry-row .meta{ font-size:12.5px; color:var(--ink-soft); }
+  .entry-row .meta{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
   .entry-row .cat{ font-size:13.5px; color:var(--ink); font-weight:600; }
-  .entry-row .amt{ font-family:var(--mono); color:var(--gold-bright); font-size:15px; white-space:nowrap; }
-  .entry-empty{ text-align:center; color:var(--ink-soft); padding:30px 10px; font-size:13.5px; }
-  .del-btn{ background:none; border:none; color:var(--bad); cursor:pointer; font-size:16px; padding:2px 6px; }
+  .entry-row .amt{ color:var(--gold-bright); font-size:14.5px; white-space:nowrap; }
+  .entry-empty{ text-align:center; color:var(--ink-faint); padding:34px 10px; font-size:13px; }
+  .del-btn{ background:none; border:none; color:var(--bad); cursor:pointer; font-size:15px; padding:2px 6px; opacity:0.75; }
+  .del-btn:hover{ opacity:1; }
 
   .grand-bar{
-    display:flex; align-items:center; justify-content:space-between; margin-top:16px; padding:14px 16px;
-    background:var(--panel-2); border:1px solid var(--gold); border-radius:10px;
+    display:flex; align-items:center; justify-content:space-between; margin-top:18px; padding:16px 18px;
+    background:linear-gradient(135deg, rgba(212,175,55,0.10), rgba(212,175,55,0.02)); border:1px solid var(--gold); border-radius:var(--radius-sm);
   }
-  .grand-bar .lbl{ font-size:13px; color:var(--ink-soft); }
-  .grand-bar .val{ font-family:var(--mono); font-size:22px; color:var(--gold-bright); font-weight:700; }
+  .grand-bar .lbl{ font-size:12px; color:var(--ink-soft); font-weight:600; }
+  .grand-bar .val{ font-size:23px; color:var(--gold-bright); font-weight:700; }
 
-  .history-item{ border:1px solid var(--line-soft); border-radius:10px; margin-bottom:10px; overflow:hidden; }
+  .history-item{ border:1px solid var(--line); border-radius:var(--radius-sm); margin-bottom:10px; overflow:hidden; }
   .history-head{
-    display:flex; align-items:center; justify-content:space-between; padding:12px 14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:space-between; padding:13px 15px; cursor:pointer;
     background:var(--panel-2);
   }
-  .history-head:hover{ background:#1a3b28; }
-  .history-head .date{ font-weight:600; font-size:14px; }
-  .history-head .time{ font-size:11.5px; color:var(--ink-soft); margin-inline-start:6px; }
-  .history-head .total{ font-family:var(--mono); color:var(--gold-bright); font-size:15px; }
-  .history-body{ display:none; padding:12px 14px; background:var(--bg-2); }
+  .history-head:hover{ background:#212128; }
+  .history-head .date{ font-weight:700; font-size:13.5px; }
+  .history-head .time{ font-size:11px; color:var(--ink-soft); margin-inline-start:6px; }
+  .history-head .total{ color:var(--gold-bright); font-size:14px; }
+  .history-body{ display:none; padding:13px 15px; background:var(--bg-2); }
   .history-body.open{ display:block; }
-  .history-body .d-row{ display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px dashed var(--line-soft); }
+  .history-body .d-row{ display:flex; justify-content:space-between; font-size:12.5px; padding:5px 0; border-bottom:1px dashed var(--line); }
   .history-body .d-row:last-child{ border-bottom:none; }
-  .history-note{ margin-top:8px; font-size:12.5px; color:var(--ink-soft); font-style:italic; }
-  .history-empty{ text-align:center; color:var(--ink-soft); padding:30px 10px; font-size:13.5px; }
+  .history-note{ margin-top:9px; font-size:12px; color:var(--ink-soft); font-style:italic; }
+  .history-empty{ text-align:center; color:var(--ink-faint); padding:34px 10px; font-size:13px; }
 
-  .filter-row{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .filter-row{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
   .filter-row .field{ flex:1; min-width:120px; }
 
   .overlay{
-    position:fixed; inset:0; background:rgba(4,10,7,0.72); display:none; align-items:center; justify-content:center;
-    z-index:100; padding:20px; backdrop-filter:blur(2px);
+    position:fixed; inset:0; background:rgba(3,3,4,0.78); display:none; align-items:center; justify-content:center;
+    z-index:100; padding:20px; backdrop-filter:blur(3px);
   }
   .overlay.open{ display:flex; }
   .modal{
-    background:linear-gradient(180deg, var(--panel), var(--bg-2)); border:1px solid var(--gold); border-radius:16px;
-    padding:26px; max-width:440px; width:100%; max-height:85vh; overflow-y:auto;
+    background:var(--panel); border:1px solid var(--gold); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:28px; max-width:460px; width:100%; max-height:85vh; overflow-y:auto;
   }
-  .modal h3{ margin:0 0 14px; color:var(--gold-bright); font-size:19px; }
-  .modal .d-row{ display:flex; justify-content:space-between; font-size:14px; padding:6px 0; border-bottom:1px dashed var(--line-soft); }
-  .modal .d-row.grand{ border-bottom:none; margin-top:8px; padding-top:10px; border-top:1px solid var(--gold); font-weight:700; font-size:16px; }
-  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+  .modal h3{ margin:0 0 16px; color:var(--ink); font-size:17px; font-weight:700; }
+  .modal .d-row{ display:flex; justify-content:space-between; font-size:13.5px; padding:7px 0; border-bottom:1px dashed var(--line); }
+  .modal .d-row.grand{ border-bottom:none; margin-top:9px; padding-top:11px; border-top:1px solid var(--gold); font-weight:700; font-size:15px; }
+  .modal-actions{ display:flex; gap:10px; margin-top:20px; }
 
   .toast{
-    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
-    background:var(--gold-bright); color:#1A1305; padding:12px 22px; border-radius:999px; font-weight:600;
-    font-size:14px; transition:all .25s ease; z-index:200; pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:var(--gold-bright); color:#1A1305; padding:12px 24px; border-radius:999px; font-weight:700;
+    font-size:13.5px; transition:all .25s ease; z-index:200; pointer-events:none; box-shadow:0 10px 28px rgba(0,0,0,0.5);
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
   .stamp-overlay{
     position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:150;
-    background:rgba(4,10,7,0.55); pointer-events:none;
+    background:rgba(3,3,4,0.6); pointer-events:none;
   }
   .stamp-overlay.show{ display:flex; }
   .stamp{
-    width:180px; height:180px; border-radius:50%; border:5px solid var(--gold);
+    width:180px; height:180px; border-radius:50%; border:2px solid var(--gold);
     display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center;
-    color:var(--gold-bright); font-family:var(--serif); font-weight:700; font-size:19px; line-height:1.3;
-    transform:scale(0) rotate(-18deg); opacity:0; background:rgba(201,162,39,0.08);
-    box-shadow:0 0 40px rgba(201,162,39,0.35), inset 0 0 30px rgba(201,162,39,0.15);
+    color:var(--gold-bright); font-family:var(--display); font-weight:700; font-size:20px; line-height:1.35;
+    transform:scale(0) rotate(-14deg); opacity:0; background:rgba(212,175,55,0.05);
+    box-shadow:0 0 44px rgba(212,175,55,0.25), inset 0 0 30px rgba(212,175,55,0.10);
   }
   .stamp.animate{ animation:stampIn .55s cubic-bezier(.2,1.4,.4,1) forwards; }
   @keyframes stampIn{
-    0%{ transform:scale(0) rotate(-18deg); opacity:0; }
-    60%{ transform:scale(1.12) rotate(-4deg); opacity:1; }
-    100%{ transform:scale(1) rotate(-8deg); opacity:1; }
+    0%{ transform:scale(0) rotate(-14deg); opacity:0; }
+    60%{ transform:scale(1.1) rotate(-3deg); opacity:1; }
+    100%{ transform:scale(1) rotate(-6deg); opacity:1; }
   }
-  .empty-hint{ text-align:center; padding:40px 20px; color:var(--ink-soft); }
-  .empty-hint .ic{ font-size:30px; margin-bottom:10px; }
 
-  .footer-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
-  a.file-link{ color:var(--gold-bright); }
+  .footer-actions{ display:flex; gap:9px; flex-wrap:wrap; margin-top:4px; }
+
+  /* Category manager rows */
+  .catrow{ display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:8px; }
+  .catrow .ic-badge{ font-size:16px; width:30px; text-align:center; }
+  .catrow .name{ flex:1; font-size:13.5px; font-weight:600; }
+  .catrow .acts{ display:flex; gap:6px; }
+  .catrow .acts button{ background:none; border:none; cursor:pointer; font-size:14px; opacity:0.75; }
+  .catrow .acts button:hover{ opacity:1; }
+
+  .sig-footer{
+    text-align:center; margin-top:36px; padding-top:20px; border-top:1px solid var(--line);
+    color:var(--ink-faint); font-size:11.5px; letter-spacing:0.4px;
+  }
+  .sig-footer b{ color:var(--gold); font-weight:700; }
 </style>
 </head>
 <body>
 
 <header class="top">
   <div class="brand">
-    <svg class="dial" viewBox="0 0 100 100">
-      <circle cx="50" cy="50" r="46" fill="none" stroke="#C9A227" stroke-width="2" opacity="0.5"/>
-      <circle cx="50" cy="50" r="38" fill="none" stroke="#C9A227" stroke-width="1" opacity="0.35"/>
-      <g stroke="#C9A227" stroke-width="2" opacity="0.6">
-        <line x1="50" y1="6" x2="50" y2="14"/>
-        <line x1="50" y1="86" x2="50" y2="94"/>
-        <line x1="6" y1="50" x2="14" y2="50"/>
-        <line x1="86" y1="50" x2="94" y2="50"/>
-      </g>
-      <line x1="50" y1="50" x2="50" y2="20" stroke="#E3C567" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="50" cy="50" r="4" fill="#E3C567"/>
-    </svg>
+    <div class="monogram">MW</div>
     <div>
-      <h1>خزنة الكاش اليومي</h1>
-      <div class="sub">تحصيل الجامعة — بزنس · كمبيوتر ساينس · هندسة · الشركة · الجمعية · التيست</div>
+      <div class="owner">Mohamed Wael</div>
+      <h1>خزنة الكاش — نظام تحصيل الجامعة</h1>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:12px;">
+  <div class="header-right">
     <div class="pending-pill">
       <span class="lbl">معلّق لسه:</span>
       <b class="num" id="headerPending">0</b>
       <span class="lbl">ج.م</span>
     </div>
+    <button class="btn btn-ghost btn-sm" onclick="openCategoryModal()">🗂️ إدارة البنود</button>
     <button class="btn btn-ghost btn-sm" onclick="openSyncModal()" id="syncBtn">☁️ الاتصال</button>
   </div>
 </header>
@@ -215,7 +231,7 @@
   <!-- MAIN COLUMN -->
   <div>
     <div class="card">
-      <h2>💵 تسجيل مبلغ جديد</h2>
+      <h2><span class="ic">💵</span> تسجيل مبلغ جديد</h2>
       <div class="form-row cols4">
         <div class="field">
           <label>البند</label>
@@ -233,7 +249,7 @@
           <button class="btn btn-gold btn-block" onclick="addEntry()">+ إضافة</button>
         </div>
       </div>
-      <div class="field" style="margin-top:10px;">
+      <div class="field" style="margin-top:12px;">
         <label>ملاحظة (اختياري)</label>
         <input id="f_note" placeholder="مثال: اسم الطالب أو تفاصيل سريعة">
       </div>
@@ -247,14 +263,14 @@
 
       <div class="entry-list" id="entryList"></div>
 
-      <button class="btn btn-gold btn-block" style="margin-top:16px;" id="handoverBtn" onclick="openHandoverModal()">🔒 تسليم الخزنة</button>
+      <button class="btn btn-gold btn-block" style="margin-top:18px;" id="handoverBtn" onclick="openHandoverModal()">🔒 تسليم الخزنة</button>
     </div>
   </div>
 
   <!-- SIDE COLUMN -->
   <div>
     <div class="card">
-      <h2>📜 سجل التسليمات</h2>
+      <h2><span class="ic">📜</span> سجل التسليمات</h2>
       <div class="filter-row">
         <div class="field"><label>من تاريخ</label><input id="filterFrom" type="date"></div>
         <div class="field"><label>إلى تاريخ</label><input id="filterTo" type="date"></div>
@@ -263,7 +279,7 @@
     </div>
 
     <div class="card">
-      <h2>⚙️ نسخ احتياطي وتصدير</h2>
+      <h2><span class="ic">⚙️</span> نسخ احتياطي وتصدير</h2>
       <div class="footer-actions">
         <button class="btn btn-ghost btn-sm" onclick="openExportModal()">📊 تصدير إكسل</button>
         <button class="btn btn-ghost btn-sm" onclick="downloadBackup()">⬇️ نسخة احتياطية</button>
@@ -274,12 +290,14 @@
   </div>
 </div>
 
+<div class="sig-footer">نظام خاص بـ <b>Mohamed Wael</b> — لإدارة تحصيلات الجامعة</div>
+
 <!-- Handover confirm modal -->
 <div class="overlay" id="handoverOverlay">
   <div class="modal">
     <h3>تأكيد تسليم الخزنة</h3>
     <div id="handoverBreakdown"></div>
-    <div class="field" style="margin-top:14px;">
+    <div class="field" style="margin-top:16px;">
       <label>ملاحظة على التسليم (اختياري)</label>
       <input id="handoverNote" placeholder="مثال: اتسلم للأستاذ / في الخزنة الرئيسية">
     </div>
@@ -290,35 +308,23 @@
   </div>
 </div>
 
-<div class="stamp-overlay" id="stampOverlay">
-  <div class="stamp" id="stampEl">تم التسليم<br>✓</div>
-</div>
-
-<div class="overlay" id="syncOverlay">
-  <div class="modal" style="max-width:520px;">
-    <h3>☁️ ربط جوجل شيت (نسخة سحابية)</h3>
-    <div style="font-size:13px;color:var(--ink-soft);line-height:1.9;margin-bottom:14px;">
-      من غير ربط، البيانات بتتخزن على المتصفح بس. اربط جوجل شيت عشان البيانات تتحفظ سحابيًا وتفتح نفس البيانات من أي جهاز.
-      <ol style="padding-inline-start:18px; margin:10px 0;">
-        <li>افتح Google Sheet جديد فاضي.</li>
-        <li>من القائمة: Extensions ← Apps Script.</li>
-        <li>امسح أي كود موجود، والصق كود Apps Script اللي معاك (نزّلته منفصل).</li>
-        <li>Deploy ← New deployment ← Type: Web app ← Execute as: Me ← Who has access: Anyone.</li>
-        <li>اضغط Deploy وانسخ الرابط اللي يخلص بـ <span class="num">/exec</span> وحطه هنا تحت.</li>
-      </ol>
-    </div>
-    <div class="field">
-      <label>رابط Google Apps Script (/exec)</label>
-      <input id="syncUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+<!-- Category manager modal -->
+<div class="overlay" id="categoryOverlay">
+  <div class="modal" style="max-width:480px;">
+    <h3>🗂️ إدارة بنود التحصيل</h3>
+    <div id="categoryListWrap"></div>
+    <div class="field-row" style="display:grid;grid-template-columns:0.7fr 1.3fr;gap:10px;margin-top:14px;">
+      <div class="field"><label>أيقونة (إيموجي)</label><input id="newCatIcon" placeholder="💰" maxlength="4"></div>
+      <div class="field"><label>اسم البند</label><input id="newCatName" placeholder="مثال: رسوم كذا"></div>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-ghost btn-block" onclick="closeSyncModal()">إلغاء</button>
-      <button class="btn btn-gold btn-block" onclick="saveSyncUrl()">حفظ وربط</button>
+      <button class="btn btn-ghost btn-block" id="catCancelBtn" style="display:none;" onclick="cancelCatEdit()">إلغاء التعديل</button>
+      <button class="btn btn-gold btn-block" id="catSaveBtn" onclick="saveCategory()">+ إضافة بند</button>
     </div>
-    <div id="syncStatusMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
   </div>
 </div>
 
+<!-- Export range modal -->
 <div class="overlay" id="exportOverlay">
   <div class="modal" style="max-width:440px;">
     <h3>📊 تصدير إكسل</h3>
@@ -336,11 +342,11 @@
       <button class="btn btn-ghost btn-sm" onclick="setExportRange('month')">الشهر ده</button>
       <button class="btn btn-ghost btn-sm" onclick="setExportRange('all')">كل الفترات</button>
     </div>
-    <div style="margin-top:14px;">
+    <div style="margin-top:16px;">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);">
         <input type="checkbox" id="exportIncludeHandovers" checked style="width:auto;"> ورقة التسليمات
       </label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);margin-top:6px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);margin-top:7px;">
         <input type="checkbox" id="exportIncludeEntries" checked style="width:auto;"> ورقة كل الحركات (تفصيلي)
       </label>
     </div>
@@ -351,10 +357,40 @@
   </div>
 </div>
 
+<!-- Sync setup modal -->
+<div class="overlay" id="syncOverlay">
+  <div class="modal" style="max-width:520px;">
+    <h3>☁️ ربط جوجل شيت (نسخة سحابية)</h3>
+    <div style="font-size:13px;color:var(--ink-soft);line-height:1.9;margin-bottom:14px;">
+      من غير ربط، البيانات بتتخزن على المتصفح بس. اربط جوجل شيت عشان البيانات تتحفظ سحابيًا وتفتح نفس البيانات من أي جهاز.
+      <ol style="padding-inline-start:18px; margin:10px 0;">
+        <li>افتح Google Sheet جديد فاضي.</li>
+        <li>من القائمة: Extensions ← Apps Script.</li>
+        <li>امسح أي كود موجود، والصق كود Apps Script اللي معاك.</li>
+        <li>Deploy ← New deployment ← Type: Web app ← Execute as: Me ← Who has access: Anyone.</li>
+        <li>اضغط Deploy وانسخ الرابط اللي يخلص بـ <span class="num">/exec</span> وحطه هنا تحت.</li>
+      </ol>
+    </div>
+    <div class="field">
+      <label>رابط Google Apps Script (/exec)</label>
+      <input id="syncUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" onclick="closeSyncModal()">إلغاء</button>
+      <button class="btn btn-gold btn-block" onclick="saveSyncUrl()">حفظ وربط</button>
+    </div>
+    <div id="syncStatusMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
+  </div>
+</div>
+
+<div class="stamp-overlay" id="stampOverlay">
+  <div class="stamp" id="stampEl">تم التسليم<br>✓</div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   {key:'business', label:'معهد - بزنس', icon:'💼'},
   {key:'cs', label:'معهد - كمبيوتر ساينس', icon:'💻'},
   {key:'engineering', label:'معهد - هندسة', icon:'⚙️'},
@@ -365,7 +401,7 @@ const CATEGORIES = [
 const STORAGE_KEY = 'cic_cash_treasury_v1';
 const SYNC_URL_KEY = 'cash_treasury_sync_url';
 
-let data = { entries: [], handovers: [] };
+let data = { entries: [], handovers: [], categories: null };
 
 function uid(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function fmt(n){ return Math.round(Number(n)||0).toLocaleString('en-US'); }
@@ -377,8 +413,9 @@ function localDateStr(d){
   const day = String(dt.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
-function catLabel(key){ const c=CATEGORIES.find(c=>c.key===key); return c?c.label:key; }
-function catIcon(key){ const c=CATEGORIES.find(c=>c.key===key); return c?c.icon:'💰'; }
+function CATEGORIES(){ return (data.categories && data.categories.length) ? data.categories : DEFAULT_CATEGORIES; }
+function catLabel(key){ const c=CATEGORIES().find(c=>c.key===key); return c?c.label:'بند محذوف'; }
+function catIcon(key){ const c=CATEGORIES().find(c=>c.key===key); return c?c.icon:'❔'; }
 
 function getSyncUrl(){ try{ return localStorage.getItem(SYNC_URL_KEY)||''; }catch(e){ return ''; } }
 function isSyncConfigured(){ const u=getSyncUrl(); return !!(u && u.indexOf('http')===0); }
@@ -403,22 +440,22 @@ function getStore(){ return isSyncConfigured() ? SheetSyncStore : LocalOnlyStore
 async function loadData(){
   try{
     const result = await getStore().get(STORAGE_KEY);
-    if(result && result.value){ const parsed = JSON.parse(result.value); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; }
+    if(result && result.value){ const parsed = JSON.parse(result.value); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; data.categories = parsed.categories||null; }
     else if(isSyncConfigured()){
-      // sheet configured but empty — try local as a one-time fallback/migration
       const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){ const parsed = JSON.parse(raw); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; await saveData(); }
+      if(raw){ const parsed = JSON.parse(raw); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; data.categories = parsed.categories||null; await saveData(); }
     }
   }catch(e){ console.error('load error', e); }
+  if(!data.categories || !data.categories.length){ data.categories = DEFAULT_CATEGORIES.map(c=>({...c})); }
   updateSyncBtn();
 }
+
 let syncTimer = null;
 let syncInFlight = false;
 let syncPendingAgain = false;
-
 async function saveData(){
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); // instant local save — UI never waits on this
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }catch(e){ showToast('فشل الحفظ محليًا — جرب تصدير نسخة احتياطية'); console.error(e); return; }
   if(isSyncConfigured()) scheduleCloudSync();
 }
@@ -445,20 +482,6 @@ function setSyncIndicator(state){
   else if(state==='error'){ btn.textContent='⚠️ فشل التزامن'; }
   else{ btn.textContent='☁️ متصل بجوجل شيت'; }
 }
-
-function pendingEntries(){ return data.entries.filter(e=>!e.handoverId); }
-function categoryTotals(list){
-  const t={}; CATEGORIES.forEach(c=>t[c.key]=0);
-  list.forEach(e=>{ t[e.category]=(t[e.category]||0)+Number(e.amount); });
-  return t;
-}
-function grandTotal(list){ return list.reduce((a,e)=>a+Number(e.amount),0); }
-
-function populateCategorySelect(){
-  const sel=document.getElementById('f_category');
-  sel.innerHTML = CATEGORIES.map(c=>`<option value="${c.key}">${c.icon} ${c.label}</option>`).join('');
-}
-
 function updateSyncBtn(){
   const btn=document.getElementById('syncBtn');
   btn.textContent = isSyncConfigured() ? '☁️ متصل بجوجل شيت' : '☁️ الاتصال';
@@ -479,7 +502,6 @@ async function saveSyncUrl(){
   if(url){
     const result = await SheetSyncStore.get(STORAGE_KEY);
     if(result===null){
-      // could genuinely be empty sheet — try a set to confirm connectivity
       const testSet = await SheetSyncStore.set(STORAGE_KEY, JSON.stringify(data));
       if(!testSet){
         document.getElementById('syncStatusMsg').textContent='مش قادر يوصل للرابط ده. تأكد إن الـ Deployment نوعه Web app والوصول Anyone.';
@@ -492,6 +514,91 @@ async function saveSyncUrl(){
   render();
   closeSyncModal();
   showToast(url ? 'تم الربط بنجاح' : 'تم إلغاء الربط — البيانات محلية بس دلوقتي');
+}
+
+function pendingEntries(){ return data.entries.filter(e=>!e.handoverId); }
+function categoryTotals(list){
+  const t={}; CATEGORIES().forEach(c=>t[c.key]=0);
+  list.forEach(e=>{ t[e.category]=(t[e.category]||0)+Number(e.amount); });
+  return t;
+}
+function grandTotal(list){ return list.reduce((a,e)=>a+Number(e.amount),0); }
+
+function populateCategorySelect(){
+  const sel=document.getElementById('f_category');
+  const prev = sel.value;
+  sel.innerHTML = CATEGORIES().map(c=>`<option value="${c.key}">${c.icon} ${c.label}</option>`).join('');
+  if(CATEGORIES().some(c=>c.key===prev)) sel.value = prev;
+}
+
+/* ---------- Category manager ---------- */
+let editingCatKey = null;
+function openCategoryModal(){
+  cancelCatEdit();
+  renderCategoryManagerList();
+  document.getElementById('categoryOverlay').classList.add('open');
+}
+function closeCategoryModal(){ document.getElementById('categoryOverlay').classList.remove('open'); populateCategorySelect(); render(); }
+function renderCategoryManagerList(){
+  const wrap=document.getElementById('categoryListWrap');
+  wrap.innerHTML = CATEGORIES().map(c=>{
+    const inUse = data.entries.some(e=>e.category===c.key);
+    return `<div class="catrow">
+      <span class="ic-badge">${c.icon}</span>
+      <span class="name">${escapeHtml(c.label)}${inUse?' <span style="color:var(--ink-faint);font-size:11px;">(مستخدم)</span>':''}</span>
+      <span class="acts">
+        <button onclick="startEditCat('${c.key}')" title="تعديل">✏️</button>
+        <button onclick="deleteCategory('${c.key}')" title="حذف">🗑️</button>
+      </span>
+    </div>`;
+  }).join('');
+}
+function startEditCat(key){
+  const c = CATEGORIES().find(c=>c.key===key); if(!c) return;
+  editingCatKey = key;
+  document.getElementById('newCatIcon').value = c.icon;
+  document.getElementById('newCatName').value = c.label;
+  document.getElementById('catSaveBtn').textContent = '💾 حفظ التعديل';
+  document.getElementById('catCancelBtn').style.display = 'block';
+}
+function cancelCatEdit(){
+  editingCatKey = null;
+  document.getElementById('newCatIcon').value='';
+  document.getElementById('newCatName').value='';
+  document.getElementById('catSaveBtn').textContent = '+ إضافة بند';
+  document.getElementById('catCancelBtn').style.display = 'none';
+}
+async function saveCategory(){
+  const icon = document.getElementById('newCatIcon').value.trim() || '💰';
+  const label = document.getElementById('newCatName').value.trim();
+  if(!label){ showToast('اكتب اسم البند'); return; }
+  if(editingCatKey){
+    const c = data.categories.find(c=>c.key===editingCatKey);
+    if(c){ c.icon=icon; c.label=label; }
+  } else {
+    if(CATEGORIES().some(c=>c.label===label)){ showToast('في بند بنفس الاسم ده بالفعل'); return; }
+    data.categories = CATEGORIES().slice();
+    data.categories.push({ key: uid(), label, icon });
+  }
+  await saveData();
+  cancelCatEdit();
+  renderCategoryManagerList();
+  populateCategorySelect();
+  render();
+  showToast('تم الحفظ');
+}
+async function deleteCategory(key){
+  const inUse = data.entries.some(e=>e.category===key);
+  const msg = inUse
+    ? 'البند ده مستخدم في حركات سابقة. لو حذفته، الحركات دي هتفضل موجودة بس هتتعرض باسم "بند محذوف". متأكد؟'
+    : 'حذف البند ده؟';
+  if(!confirm(msg)) return;
+  data.categories = CATEGORIES().filter(c=>c.key!==key);
+  if(data.categories.length===0){ data.categories = DEFAULT_CATEGORIES.map(c=>({...c})); showToast('لازم يفضل بند واحد على الأقل — رجعنا البنود الأساسية'); }
+  await saveData();
+  renderCategoryManagerList();
+  populateCategorySelect();
+  render();
 }
 
 async function addEntry(){
@@ -518,10 +625,10 @@ async function deleteEntry(id){
 function renderCatGrid(){
   const pending = pendingEntries();
   const totals = categoryTotals(pending);
-  document.getElementById('catGrid').innerHTML = CATEGORIES.map(c=>`
+  document.getElementById('catGrid').innerHTML = CATEGORIES().map(c=>`
     <div class="cat-card">
       <span class="ic">${c.icon}</span>
-      <div class="lbl">${c.label}</div>
+      <div class="lbl">${escapeHtml(c.label)}</div>
       <div class="amt num">${fmt(totals[c.key])} ج.م</div>
     </div>
   `).join('');
@@ -537,7 +644,7 @@ function renderEntryList(){
   list.innerHTML = pending.map(e=>`
     <div class="entry-row">
       <div>
-        <div class="cat">${catIcon(e.category)} ${catLabel(e.category)}</div>
+        <div class="cat">${catIcon(e.category)} ${escapeHtml(catLabel(e.category))}</div>
         <div class="meta">${e.date}${e.note?' · '+escapeHtml(e.note):''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
@@ -571,7 +678,7 @@ function renderHistory(){
     const dateStr = dt.toLocaleDateString('ar-EG');
     const timeStr = dt.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
     const isOpen = openHistoryIds.has(h.id);
-    const rows = CATEGORIES.map(c=> h.totals[c.key]>0 ? `<div class="d-row"><span>${c.icon} ${c.label}</span><span class="num">${fmt(h.totals[c.key])} ج.م</span></div>` : '').join('');
+    const rows = CATEGORIES().map(c=> h.totals[c.key]>0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num">${fmt(h.totals[c.key])} ج.م</span></div>` : '').join('');
     return `
     <div class="history-item">
       <div class="history-head" onclick="toggleHistory('${h.id}')">
@@ -623,7 +730,7 @@ function openHandoverModal(){
   if(pending.length===0){ showToast('مفيش مبالغ معلّقة للتسليم'); return; }
   const totals = categoryTotals(pending);
   const total = grandTotal(pending);
-  const rows = CATEGORIES.map(c=> totals[c.key]>0 ? `<div class="d-row"><span>${c.icon} ${c.label}</span><span class="num">${fmt(totals[c.key])} ج.م</span></div>` : '').join('');
+  const rows = CATEGORIES().map(c=> totals[c.key]>0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num">${fmt(totals[c.key])} ج.م</span></div>` : '').join('');
   document.getElementById('handoverBreakdown').innerHTML = rows + `<div class="d-row grand"><span>الإجمالي</span><span class="num">${fmt(total)} ج.م</span></div>`;
   document.getElementById('handoverNote').value='';
   document.getElementById('handoverOverlay').classList.add('open');
@@ -705,14 +812,14 @@ async function exportExcelReport(){
     ws1.columns = [
       {header:'Date', key:'date', width:14},
       {header:'Time', key:'time', width:10},
-      ...CATEGORIES.map(c=>({header:c.label, key:c.key, width:18})),
+      ...CATEGORIES().map(c=>({header:c.label, key:c.key, width:18})),
       {header:'Total', key:'total', width:14},
       {header:'Note', key:'note', width:30},
     ];
     handoversInRange.slice().sort((a,b)=> new Date(a.handedOverAt)-new Date(b.handedOverAt)).forEach(h=>{
       const dt=new Date(h.handedOverAt);
       const row={ date: localDateStr(dt), time: dt.toTimeString().slice(0,5), total: h.total, note: h.note||'' };
-      CATEGORIES.forEach(c=>{ row[c.key]=h.totals[c.key]||0; });
+      CATEGORIES().forEach(c=>{ row[c.key]=h.totals[c.key]||0; });
       ws1.addRow(row);
     });
     sheets.push(ws1);
@@ -739,8 +846,8 @@ async function exportExcelReport(){
   sheets.forEach(ws=>{
     const headerRow=ws.getRow(1);
     headerRow.eachCell(cell=>{
-      cell.fill={ type:'pattern', pattern:'solid', fgColor:{argb:'FF122A1F'} };
-      cell.font={ color:{argb:'FFE3C567'}, bold:true, size:11 };
+      cell.fill={ type:'pattern', pattern:'solid', fgColor:{argb:'FF15151A'} };
+      cell.font={ color:{argb:'FFF0D584'}, bold:true, size:11 };
       cell.alignment={ horizontal:'center', vertical:'middle' };
     });
   });
@@ -773,7 +880,10 @@ function restoreBackup(evt){
       if(!parsed.entries || !parsed.handovers){ showToast('الملف مش بصيغة صحيحة'); return; }
       if(!confirm('استعادة النسخة دي هتستبدل البيانات الحالية بالكامل. متأكد؟')) return;
       data = parsed;
-      await saveData(); render();
+      if(!data.categories || !data.categories.length){ data.categories = DEFAULT_CATEGORIES.map(c=>({...c})); }
+      await saveData();
+      populateCategorySelect();
+      render();
       showToast('تم استعادة النسخة بنجاح');
     }catch(e){ showToast('فشل قراءة الملف'); console.error(e); }
   };
@@ -784,20 +894,19 @@ function restoreBackup(evt){
 document.getElementById('filterFrom').addEventListener('change', renderHistory);
 document.getElementById('filterTo').addEventListener('change', renderHistory);
 
-populateCategorySelect();
 let lastAutoDate = todayStr();
 document.getElementById('f_date').value = lastAutoDate;
 setInterval(()=>{
   const nowToday = todayStr();
   if(nowToday !== lastAutoDate){
     const fDate = document.getElementById('f_date');
-    // only auto-advance if the field still shows the date we auto-set (user hasn't manually picked another day)
     if(fDate.value === lastAutoDate){ fDate.value = nowToday; }
     lastAutoDate = nowToday;
   }
 }, 60000);
+
 updateSyncBtn();
-loadData().then(render);
+loadData().then(()=>{ populateCategorySelect(); render(); });
 </script>
 </body>
 </html>
