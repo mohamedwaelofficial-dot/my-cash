@@ -222,8 +222,11 @@
       <b class="num" id="headerPending">0</b>
       <span class="lbl">ج.م</span>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="openCategoryModal()">🗂️ إدارة البنود</button>
+    <span id="roleBadge" style="font-size:11.5px; color:var(--ink-soft); border:1px solid var(--line-strong); border-radius:999px; padding:8px 14px;"></span>
+    <button class="btn btn-ghost btn-sm" id="categoryBtn" onclick="openCategoryModal()">🗂️ إدارة البنود</button>
     <button class="btn btn-ghost btn-sm" onclick="openSyncModal()" id="syncBtn">☁️ الاتصال</button>
+    <button class="btn btn-ghost btn-sm" id="accountsBtn" onclick="openAccountsModal()" style="display:none;">🔑 الحسابات</button>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">🚪 خروج</button>
   </div>
 </header>
 
@@ -232,6 +235,7 @@
   <div>
     <div class="card">
       <h2><span class="ic">💵</span> تسجيل مبلغ جديد</h2>
+      <div id="addEntryControls">
       <div class="form-row cols4">
         <div class="field">
           <label>البند</label>
@@ -239,7 +243,7 @@
         </div>
         <div class="field">
           <label>المبلغ (ج.م)</label>
-          <input id="f_amount" type="number" min="0" placeholder="0" class="num-input">
+          <input id="f_amount" type="number" placeholder="0 (سالب = استرداد)" class="num-input">
         </div>
         <div class="field">
           <label>التاريخ</label>
@@ -252,6 +256,7 @@
       <div class="field" style="margin-top:12px;">
         <label>ملاحظة (اختياري)</label>
         <input id="f_note" placeholder="مثال: اسم الطالب أو تفاصيل سريعة">
+      </div>
       </div>
 
       <div class="cat-grid" id="catGrid"></div>
@@ -283,7 +288,7 @@
       <div class="footer-actions">
         <button class="btn btn-ghost btn-sm" onclick="openExportModal()">📊 تصدير إكسل</button>
         <button class="btn btn-ghost btn-sm" onclick="downloadBackup()">⬇️ نسخة احتياطية</button>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('restoreFile').click()">⬆️ استعادة نسخة</button>
+        <button class="btn btn-ghost btn-sm" id="restoreBtn" onclick="document.getElementById('restoreFile').click()">⬆️ استعادة نسخة</button>
         <input type="file" id="restoreFile" accept="application/json" style="display:none;" onchange="restoreBackup(event)">
       </div>
     </div>
@@ -393,6 +398,61 @@
   <div class="stamp" id="stampEl">تم التسليم<br>✓</div>
 </div>
 
+<div class="overlay open" id="loginOverlay" style="z-index:300;">
+  <div class="modal" style="max-width:400px;text-align:center;">
+    <div class="monogram" style="margin:0 auto 16px;">MW</div>
+    <h3 style="margin-bottom:6px;">خزنة الكاش</h3>
+    <div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">نظام خاص بـ Mohamed Wael</div>
+    <div class="field">
+      <label>كلمة السر</label>
+      <input id="loginPasswordInput" type="password" placeholder="اكتب كلمة السر" onkeydown="if(event.key==='Enter') attemptLogin()">
+    </div>
+    <div id="loginError" style="color:var(--bad);font-size:12.5px;margin-top:8px;min-height:16px;"></div>
+    <button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="attemptLogin()">دخول</button>
+  </div>
+</div>
+
+<div class="overlay" id="setupOverlay" style="z-index:300;">
+  <div class="modal" style="max-width:440px;">
+    <div class="monogram" style="margin:0 auto 16px;">MW</div>
+    <h3 style="text-align:center;">أول استخدام — اضبط كلمات السر</h3>
+    <div style="font-size:12.5px;color:var(--ink-soft);text-align:center;margin-bottom:18px;">
+      كلمة سر الأدمن ليك انت وبيها تقدر تضيف وتعدّل وتحذف. كلمة سر المراجعة (اختياري) تديها لأي حد تاني يشوف الأرقام بس من غير ما يقدر يغيّر حاجة.
+    </div>
+    <div class="field">
+      <label>كلمة سر الأدمن (إجبارية)</label>
+      <input id="setupAdminPass" type="password" placeholder="اكتب كلمة سر قوية">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>كلمة سر المراجعة/العرض فقط (اختياري — تقدر تضيفها بعدين)</label>
+      <input id="setupViewerPass" type="password" placeholder="اختياري">
+    </div>
+    <div id="setupError" style="color:var(--bad);font-size:12.5px;margin-top:8px;min-height:16px;"></div>
+    <button class="btn btn-gold btn-block" style="margin-top:10px;" onclick="completeSetup()">حفظ والدخول كأدمن</button>
+  </div>
+</div>
+
+<div class="overlay" id="accountsOverlay" onclick="if(event.target===this) closeAccountsModal()">
+  <div class="modal" style="max-width:440px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h3 style="margin:0;">🔑 إدارة كلمات السر</h3>
+      <button onclick="closeAccountsModal()" style="background:none;border:none;color:var(--ink-soft);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div class="field">
+      <label>كلمة سر الأدمن الجديدة (سيبها فاضية لو مش عايز تغيّرها)</label>
+      <input id="acctAdminPass" type="password" placeholder="••••••">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>كلمة سر المراجعة/العرض فقط (سيبها فاضية لو مش عايز تغيّرها)</label>
+      <input id="acctViewerPass" type="password" placeholder="••••••">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" onclick="closeAccountsModal()">إلغاء</button>
+      <button class="btn btn-gold btn-block" onclick="saveAccounts()">حفظ</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -407,7 +467,7 @@ const DEFAULT_CATEGORIES = [
 const STORAGE_KEY = 'cic_cash_treasury_v1';
 const SYNC_URL_KEY = 'cash_treasury_sync_url';
 
-let data = { entries: [], handovers: [], categories: null };
+let data = { entries: [], handovers: [], categories: null, adminPassword:'', viewerPassword:'' };
 
 function uid(){ return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function fmt(n){ return Math.round(Number(n)||0).toLocaleString('en-US'); }
@@ -446,10 +506,10 @@ function getStore(){ return isSyncConfigured() ? SheetSyncStore : LocalOnlyStore
 async function loadData(){
   try{
     const result = await getStore().get(STORAGE_KEY);
-    if(result && result.value){ const parsed = JSON.parse(result.value); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; data.categories = parsed.categories||null; }
+    if(result && result.value){ const parsed = JSON.parse(result.value); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; data.categories = parsed.categories||null; data.adminPassword = parsed.adminPassword||''; data.viewerPassword = parsed.viewerPassword||''; }
     else if(isSyncConfigured()){
       const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){ const parsed = JSON.parse(raw); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; data.categories = parsed.categories||null; await saveData(); }
+      if(raw){ const parsed = JSON.parse(raw); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; data.categories = parsed.categories||null; data.adminPassword = parsed.adminPassword||''; data.viewerPassword = parsed.viewerPassword||''; await saveData(); }
     }
   }catch(e){ console.error('load error', e); }
   if(!data.categories || !data.categories.length){ data.categories = DEFAULT_CATEGORIES.map(c=>({...c})); }
@@ -574,7 +634,9 @@ function cancelCatEdit(){
   document.getElementById('catSaveBtn').textContent = '+ إضافة بند';
   document.getElementById('catCancelBtn').style.display = 'none';
 }
+function requireAdmin(){ if(currentRole!=='admin'){ showToast('معندكش صلاحية تعمل الحاجة دي'); return false; } return true; }
 async function saveCategory(){
+  if(!requireAdmin()) return;
   const icon = document.getElementById('newCatIcon').value.trim() || '💰';
   const label = document.getElementById('newCatName').value.trim();
   if(!label){ showToast('اكتب اسم البند'); return; }
@@ -594,6 +656,7 @@ async function saveCategory(){
   showToast('تم الحفظ');
 }
 async function deleteCategory(key){
+  if(!requireAdmin()) return;
   const inUse = data.entries.some(e=>e.category===key);
   const msg = inUse
     ? 'البند ده مستخدم في حركات سابقة. لو حذفته، الحركات دي هتفضل موجودة بس هتتعرض باسم "بند محذوف". متأكد؟'
@@ -608,21 +671,23 @@ async function deleteCategory(key){
 }
 
 async function addEntry(){
+  if(!requireAdmin()) return;
   const category=document.getElementById('f_category').value;
   const amount=Number(document.getElementById('f_amount').value)||0;
   const date=document.getElementById('f_date').value || todayStr();
   const note=document.getElementById('f_note').value.trim();
-  if(amount<=0){ showToast('اكتب مبلغ أكبر من صفر'); return; }
+  if(amount===0){ showToast('اكتب مبلغ مختلف عن صفر (رقم سالب = استرداد)'); return; }
   data.entries.push({ id:uid(), date, category, amount, note, createdAt:new Date().toISOString(), handoverId:null });
   await saveData();
   document.getElementById('f_amount').value='';
   document.getElementById('f_note').value='';
   document.getElementById('f_amount').focus();
   render();
-  showToast('تم تسجيل المبلغ');
+  showToast(amount<0 ? 'تم تسجيل الاسترداد' : 'تم تسجيل المبلغ');
 }
 
 async function deleteEntry(id){
+  if(!requireAdmin()) return;
   if(!confirm('حذف المبلغ ده؟')) return;
   data.entries = data.entries.filter(e=>e.id!==id);
   await saveData(); render();
@@ -635,7 +700,7 @@ function renderCatGrid(){
     <div class="cat-card">
       <span class="ic">${c.icon}</span>
       <div class="lbl">${escapeHtml(c.label)}</div>
-      <div class="amt num">${fmt(totals[c.key])} ج.م</div>
+      <div class="amt num" style="color:${totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(totals[c.key])} ج.م</div>
     </div>
   `).join('');
 }
@@ -647,25 +712,27 @@ function renderEntryList(){
     list.innerHTML='<div class="entry-empty">مفيش مبالغ معلّقة حاليًا — سجّل أول مبلغ فوق</div>';
     return;
   }
-  list.innerHTML = pending.map(e=>`
+  list.innerHTML = pending.map(e=>{
+    const isRefund = e.amount<0;
+    return `
     <div class="entry-row">
       <div>
-        <div class="cat">${catIcon(e.category)} ${escapeHtml(catLabel(e.category))}</div>
+        <div class="cat">${catIcon(e.category)} ${escapeHtml(catLabel(e.category))}${isRefund?' <span style="color:var(--bad);font-size:11px;">(استرداد)</span>':''}</div>
         <div class="meta">${e.date}${e.note?' · '+escapeHtml(e.note):''}</div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
-        <span class="amt num">${fmt(e.amount)} ج.م</span>
-        <button class="del-btn" onclick="deleteEntry('${e.id}')" title="حذف">🗑️</button>
+        <span class="amt num" style="color:${isRefund?'var(--bad)':'var(--gold-bright)'};">${fmt(e.amount)} ج.م</span>
+        ${currentRole==='admin' ? `<button class="del-btn" onclick="deleteEntry('${e.id}')" title="حذف">🗑️</button>` : ''}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function renderGrandBar(){
   const total = grandTotal(pendingEntries());
   document.getElementById('grandPending').textContent = fmt(total)+' ج.م';
   document.getElementById('headerPending').textContent = fmt(total);
-  document.getElementById('handoverBtn').disabled = total<=0;
+  document.getElementById('handoverBtn').disabled = pendingEntries().length===0;
 }
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
@@ -684,7 +751,7 @@ function renderHistory(){
     const dateStr = dt.toLocaleDateString('ar-EG');
     const timeStr = dt.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
     const isOpen = openHistoryIds.has(h.id);
-    const rows = CATEGORIES().map(c=> h.totals[c.key]>0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num">${fmt(h.totals[c.key])} ج.م</span></div>` : '').join('');
+    const rows = CATEGORIES().map(c=> h.totals[c.key]!==0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num" style="color:${h.totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(h.totals[c.key])} ج.م</span></div>` : '').join('');
     return `
     <div class="history-item">
       <div class="history-head" onclick="toggleHistory('${h.id}')">
@@ -694,10 +761,10 @@ function renderHistory(){
       <div class="history-body ${isOpen?'open':''}" id="hbody-${h.id}">
         ${rows}
         ${h.note ? `<div class="history-note">"${escapeHtml(h.note)}"</div>` : ''}
-        <div class="footer-actions" style="margin-top:12px;">
+        ${currentRole==='admin' ? `<div class="footer-actions" style="margin-top:12px;">
           <button class="btn btn-ghost btn-sm" onclick="editHandover('${h.id}')">✏️ تعديل (يرجّعه معلّق)</button>
           <button class="btn btn-danger btn-sm" onclick="deleteHandover('${h.id}')">🗑️ حذف نهائي</button>
-        </div>
+        </div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -707,6 +774,7 @@ function toggleHistory(id){
   renderHistory();
 }
 async function editHandover(id){
+  if(!requireAdmin()) return;
   const h = data.handovers.find(x=>x.id===id); if(!h) return;
   if(!confirm('هيرجّع كل مبالغ التسليم ده لقائمة "المعلّق" فوق عشان تعدّل فيها براحتك، وتقدر تسلّمها تاني بعد كده. تكمل؟')) return;
   data.entries.forEach(e=>{ if(e.handoverId===id) e.handoverId=null; });
@@ -716,6 +784,7 @@ async function editHandover(id){
   showToast('رجعت المبالغ للقائمة المعلّقة — عدّل واضغط تسليم الخزنة تاني');
 }
 async function deleteHandover(id){
+  if(!requireAdmin()) return;
   if(!confirm('حذف التسليم ده نهائيًا هيمسح معاه كل المبالغ اللي كانت جواه، والعملية دي مش هترجع. متأكد؟')) return;
   data.entries = data.entries.filter(e=>e.handoverId!==id);
   data.handovers = data.handovers.filter(x=>x.id!==id);
@@ -736,7 +805,7 @@ function openHandoverModal(){
   if(pending.length===0){ showToast('مفيش مبالغ معلّقة للتسليم'); return; }
   const totals = categoryTotals(pending);
   const total = grandTotal(pending);
-  const rows = CATEGORIES().map(c=> totals[c.key]>0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num">${fmt(totals[c.key])} ج.م</span></div>` : '').join('');
+  const rows = CATEGORIES().map(c=> totals[c.key]!==0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num" style="color:${totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(totals[c.key])} ج.م</span></div>` : '').join('');
   document.getElementById('handoverBreakdown').innerHTML = rows + `<div class="d-row grand"><span>الإجمالي</span><span class="num">${fmt(total)} ج.م</span></div>`;
   document.getElementById('handoverNote').value='';
   document.getElementById('handoverOverlay').classList.add('open');
@@ -744,6 +813,7 @@ function openHandoverModal(){
 function closeHandoverModal(){ document.getElementById('handoverOverlay').classList.remove('open'); }
 
 async function confirmHandover(){
+  if(!requireAdmin()) return;
   const pending = pendingEntries();
   if(pending.length===0){ closeHandoverModal(); return; }
   const id=uid();
@@ -878,6 +948,7 @@ function downloadBackup(){
   showToast('تم تنزيل النسخة الاحتياطية');
 }
 function restoreBackup(evt){
+  if(!requireAdmin()) return;
   const file = evt.target.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = async ()=>{
@@ -902,7 +973,7 @@ document.getElementById('filterTo').addEventListener('change', renderHistory);
 
 document.addEventListener('keydown', (e)=>{
   if(e.key==='Escape'){
-    document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+    document.querySelectorAll('.overlay.open').forEach(o=>{ if(o.id!=='loginOverlay' && o.id!=='setupOverlay') o.classList.remove('open'); });
   }
 });
 
@@ -917,8 +988,93 @@ setInterval(()=>{
   }
 }, 60000);
 
+/* ---------- Auth / roles ---------- */
+const ROLE_KEY = 'cash_treasury_role';
+let currentRole = null; // 'admin' | 'viewer'
+
+function applyRoleUI(){
+  const isAdmin = currentRole==='admin';
+  document.getElementById('roleBadge').textContent = isAdmin ? '👑 أدمن' : '👁️ مراجعة فقط';
+  document.getElementById('addEntryControls').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('handoverBtn').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('categoryBtn').style.display = isAdmin ? 'inline-block' : 'none';
+  document.getElementById('syncBtn').style.display = isAdmin ? 'inline-block' : 'none';
+  document.getElementById('accountsBtn').style.display = isAdmin ? 'inline-block' : 'none';
+  document.getElementById('restoreBtn').style.display = isAdmin ? 'inline-block' : 'none';
+}
+
+function attemptLogin(){
+  const pass = document.getElementById('loginPasswordInput').value;
+  const err = document.getElementById('loginError');
+  if(data.adminPassword && pass===data.adminPassword){ setRole('admin'); return; }
+  if(data.viewerPassword && pass===data.viewerPassword){ setRole('viewer'); return; }
+  err.textContent = 'كلمة السر غلط';
+  document.getElementById('loginPasswordInput').value='';
+}
+function setRole(role){
+  currentRole = role;
+  try{ sessionStorage.setItem(ROLE_KEY, role); }catch(e){}
+  document.getElementById('loginOverlay').classList.remove('open');
+  document.getElementById('loginPasswordInput').value='';
+  document.getElementById('loginError').textContent='';
+  applyRoleUI();
+  populateCategorySelect();
+  render();
+}
+function logout(){
+  currentRole = null;
+  try{ sessionStorage.removeItem(ROLE_KEY); }catch(e){}
+  document.getElementById('loginOverlay').classList.add('open');
+}
+async function completeSetup(){
+  const admin = document.getElementById('setupAdminPass').value;
+  const viewer = document.getElementById('setupViewerPass').value;
+  const err = document.getElementById('setupError');
+  if(!admin || admin.length<4){ err.textContent='كلمة سر الأدمن لازم تكون 4 حروف/أرقام على الأقل'; return; }
+  data.adminPassword = admin;
+  data.viewerPassword = viewer || '';
+  await saveData();
+  document.getElementById('setupOverlay').classList.remove('open');
+  setRole('admin');
+}
+function openAccountsModal(){
+  document.getElementById('acctAdminPass').value='';
+  document.getElementById('acctViewerPass').value='';
+  document.getElementById('accountsOverlay').classList.add('open');
+}
+function closeAccountsModal(){ document.getElementById('accountsOverlay').classList.remove('open'); }
+async function saveAccounts(){
+  const admin = document.getElementById('acctAdminPass').value;
+  const viewer = document.getElementById('acctViewerPass').value;
+  if(admin) data.adminPassword = admin;
+  if(viewer) data.viewerPassword = viewer;
+  await saveData();
+  closeAccountsModal();
+  showToast('تم تحديث كلمات السر');
+}
+
+async function initAuth(){
+  await loadData();
+  populateCategorySelect();
+  if(!data.adminPassword){
+    document.getElementById('loginOverlay').classList.remove('open');
+    document.getElementById('setupOverlay').classList.add('open');
+    return;
+  }
+  let savedRole = null;
+  try{ savedRole = sessionStorage.getItem(ROLE_KEY); }catch(e){}
+  if(savedRole==='admin' || savedRole==='viewer'){
+    currentRole = savedRole;
+    document.getElementById('loginOverlay').classList.remove('open');
+    applyRoleUI();
+    render();
+  } else {
+    document.getElementById('loginOverlay').classList.add('open');
+  }
+}
+
 updateSyncBtn();
-loadData().then(()=>{ populateCategorySelect(); render(); });
+initAuth();
 </script>
 </body>
 </html>
