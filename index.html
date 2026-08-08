@@ -303,6 +303,10 @@
     <h3>تأكيد تسليم الخزنة</h3>
     <div id="handoverBreakdown"></div>
     <div class="field" style="margin-top:16px;">
+      <label>تاريخ التسليم (تقدر تغيّره لو بتسلّم متأخر)</label>
+      <input id="handoverDate" type="date">
+    </div>
+    <div class="field" style="margin-top:12px;">
       <label>ملاحظة على التسليم (اختياري)</label>
       <input id="handoverNote" placeholder="مثال: اتسلم للأستاذ / في الخزنة الرئيسية">
     </div>
@@ -313,7 +317,37 @@
   </div>
 </div>
 
+<div class="overlay" id="editEntryOverlay" onclick="if(event.target===this) closeEditEntryModal()">
+  <div class="modal" style="max-width:420px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h3 style="margin:0;">✏️ تعديل المبلغ</h3>
+      <button onclick="closeEditEntryModal()" style="background:none;border:none;color:var(--ink-soft);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div class="field">
+      <label>البند</label>
+      <select id="editCategory"></select>
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>المبلغ (ج.م)</label>
+      <input id="editAmount" type="number" placeholder="0 (سالب = استرداد)" class="num-input">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>التاريخ</label>
+      <input id="editDate" type="date">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>ملاحظة (اختياري)</label>
+      <input id="editNote">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-block" onclick="closeEditEntryModal()">إلغاء</button>
+      <button class="btn btn-gold btn-block" onclick="saveEditedEntry()">حفظ التعديل</button>
+    </div>
+  </div>
+</div>
+
 <!-- Category manager modal -->
+
 <div class="overlay" id="categoryOverlay" onclick="if(event.target===this) closeCategoryModal()">
   <div class="modal" style="max-width:480px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -693,6 +727,35 @@ async function deleteEntry(id){
   await saveData(); render();
 }
 
+let editingEntryId = null;
+function openEditEntryModal(id){
+  if(!requireAdmin()) return;
+  const e = data.entries.find(x=>x.id===id); if(!e) return;
+  editingEntryId = id;
+  const sel = document.getElementById('editCategory');
+  sel.innerHTML = CATEGORIES().map(c=>`<option value="${c.key}">${c.icon} ${c.label}</option>`).join('');
+  sel.value = e.category;
+  document.getElementById('editAmount').value = e.amount;
+  document.getElementById('editDate').value = e.date;
+  document.getElementById('editNote').value = e.note||'';
+  document.getElementById('editEntryOverlay').classList.add('open');
+}
+function closeEditEntryModal(){ editingEntryId=null; document.getElementById('editEntryOverlay').classList.remove('open'); }
+async function saveEditedEntry(){
+  if(!requireAdmin()) return;
+  const e = data.entries.find(x=>x.id===editingEntryId); if(!e) return;
+  const amount = Number(document.getElementById('editAmount').value)||0;
+  if(amount===0){ showToast('اكتب مبلغ مختلف عن صفر'); return; }
+  e.category = document.getElementById('editCategory').value;
+  e.amount = amount;
+  e.date = document.getElementById('editDate').value || e.date;
+  e.note = document.getElementById('editNote').value.trim();
+  await saveData();
+  closeEditEntryModal();
+  render();
+  showToast('تم حفظ التعديل');
+}
+
 function renderCatGrid(){
   const pending = pendingEntries();
   const totals = categoryTotals(pending);
@@ -722,7 +785,7 @@ function renderEntryList(){
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <span class="amt num" style="color:${isRefund?'var(--bad)':'var(--gold-bright)'};">${fmt(e.amount)} ج.م</span>
-        ${currentRole==='admin' ? `<button class="del-btn" onclick="deleteEntry('${e.id}')" title="حذف">🗑️</button>` : ''}
+        ${currentRole==='admin' ? `<button class="del-btn" style="opacity:0.85;" onclick="openEditEntryModal('${e.id}')" title="تعديل">✏️</button><button class="del-btn" onclick="deleteEntry('${e.id}')" title="حذف">🗑️</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -808,6 +871,7 @@ function openHandoverModal(){
   const rows = CATEGORIES().map(c=> totals[c.key]!==0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num" style="color:${totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(totals[c.key])} ج.م</span></div>` : '').join('');
   document.getElementById('handoverBreakdown').innerHTML = rows + `<div class="d-row grand"><span>الإجمالي</span><span class="num">${fmt(total)} ج.م</span></div>`;
   document.getElementById('handoverNote').value='';
+  document.getElementById('handoverDate').value = todayStr();
   document.getElementById('handoverOverlay').classList.add('open');
 }
 function closeHandoverModal(){ document.getElementById('handoverOverlay').classList.remove('open'); }
@@ -820,7 +884,11 @@ async function confirmHandover(){
   const totals=categoryTotals(pending);
   const total=grandTotal(pending);
   const note=document.getElementById('handoverNote').value.trim();
-  data.handovers.push({ id, handedOverAt:new Date().toISOString(), totals, total, note, entryIds:pending.map(e=>e.id) });
+  const chosenDate = document.getElementById('handoverDate').value || todayStr();
+  const now = new Date();
+  const timePart = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+  const handedOverAt = new Date(`${chosenDate}T${timePart}`).toISOString();
+  data.handovers.push({ id, handedOverAt, totals, total, note, entryIds:pending.map(e=>e.id) });
   pending.forEach(e=>e.handoverId=id);
   await saveData();
   closeHandoverModal();
