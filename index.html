@@ -403,11 +403,12 @@
 </div>
 
 <!-- Sync setup modal -->
-<div class="overlay" id="syncOverlay" onclick="if(event.target===this) closeSyncModal()">
+<div class="overlay" id="syncOverlay" style="z-index:400;" onclick="if(event.target===this) closeSyncModal()">
   <div class="modal" style="max-width:520px;">
     <h3>☁️ ربط جوجل شيت (نسخة سحابية)</h3>
     <div style="font-size:13px;color:var(--ink-soft);line-height:1.9;margin-bottom:14px;">
-      من غير ربط، البيانات بتتخزن على المتصفح بس. اربط جوجل شيت عشان البيانات تتحفظ سحابيًا وتفتح نفس البيانات من أي جهاز.
+      من غير ربط، البيانات بتتخزن على المتصفح بس (يعني كل جهاز هيبقى بياناته لوحده). اربط جوجل شيت عشان البيانات تتحفظ سحابيًا وتفتح نفس البيانات من أي جهاز.
+      <br><b style="color:var(--gold-bright);">لو الشيت ده معمول قبل كده من جهاز تاني، الصق نفس اللينك القديم بالظبط تحت — مش هتحتاج تعمل شيت جديد.</b>
       <ol style="padding-inline-start:18px; margin:10px 0;">
         <li>افتح Google Sheet جديد فاضي.</li>
         <li>من القائمة: Extensions ← Apps Script.</li>
@@ -443,6 +444,9 @@
     </div>
     <div id="loginError" style="color:var(--bad);font-size:12.5px;margin-top:8px;min-height:16px;"></div>
     <button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="attemptLogin()">دخول</button>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
+      <button class="btn btn-ghost btn-block btn-sm" onclick="openSyncModal()">☁️ بتفتح من جهاز جديد؟ اربط جوجل شيت هنا</button>
+    </div>
   </div>
 </div>
 
@@ -463,6 +467,9 @@
     </div>
     <div id="setupError" style="color:var(--bad);font-size:12.5px;margin-top:8px;min-height:16px;"></div>
     <button class="btn btn-gold btn-block" style="margin-top:10px;" onclick="completeSetup()">حفظ والدخول كأدمن</button>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
+      <button class="btn btn-ghost btn-block btn-sm" onclick="openSyncModal()">☁️ عندك بيانات محفوظة سحابيًا من قبل؟ اربطها هنا بدل الإعداد من الأول</button>
+    </div>
   </div>
 </div>
 
@@ -611,8 +618,22 @@ async function saveSyncUrl(){
   }
   updateSyncBtn();
   await loadData();
-  render();
+  populateCategorySelect();
   closeSyncModal();
+  if(currentRole){
+    // already authenticated in this session — just refresh the view with the (possibly newly pulled) data
+    render();
+  } else {
+    // connecting before login/setup — re-check whether the cloud already has an admin password
+    if(data.adminPassword){
+      document.getElementById('setupOverlay').classList.remove('open');
+      document.getElementById('loginOverlay').classList.add('open');
+      showToast('اتربط بنجاح — دلوقتي دخول بنفس كلمة السر اللي مضبوطة');
+    } else {
+      showToast('اتربط، بس الشيت لسه فاضي — كمّل الإعداد وحط كلمة سر جديدة');
+    }
+    return;
+  }
   showToast(url ? 'تم الربط بنجاح' : 'تم إلغاء الربط — البيانات محلية بس دلوقتي');
 }
 
