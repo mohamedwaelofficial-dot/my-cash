@@ -80,6 +80,7 @@
 
   .form-row{ display:grid; grid-template-columns:1fr; gap:13px; }
   @media(min-width:640px){ .form-row.cols4{ grid-template-columns: 1.5fr 1fr 1fr 0.85fr; } }
+  @media(min-width:900px){ .form-row.cols5{ grid-template-columns: 1.3fr 1fr 0.9fr 1fr 0.85fr; } }
   label{ display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:600; }
   select, input{
     width:100%; background:var(--bg-2); border:1px solid var(--line); color:var(--ink);
@@ -111,7 +112,12 @@
   .cat-card .lbl{ font-size:11.5px; color:var(--ink-soft); margin:7px 0 4px; font-weight:600; }
   .cat-card .amt{ font-size:16px; color:var(--gold-bright); }
 
-  .entry-list{ margin-top:18px; display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto; }
+  .entry-list{ margin-top:18px; display:flex; flex-direction:column; gap:14px; max-height:420px; overflow-y:auto; }
+  .day-group{ display:flex; flex-direction:column; gap:8px; }
+  .day-group-head{
+    display:flex; align-items:center; justify-content:space-between; padding:6px 4px;
+    font-size:12px; font-weight:700; color:var(--gold); border-bottom:1px solid var(--line-strong);
+  }
   .entry-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius-sm); padding:11px 13px;
@@ -236,14 +242,18 @@
     <div class="card">
       <h2><span class="ic">💵</span> تسجيل مبلغ جديد</h2>
       <div id="addEntryControls">
-      <div class="form-row cols4">
+      <div class="form-row cols5">
         <div class="field">
           <label>البند</label>
           <select id="f_category"></select>
         </div>
         <div class="field">
           <label>المبلغ (ج.م)</label>
-          <input id="f_amount" type="number" placeholder="0 (سالب = استرداد)" class="num-input">
+          <input id="f_amount" type="number" placeholder="0 (سالب = استرداد)" class="num-input" onkeydown="if(event.key==='Enter') addEntry()">
+        </div>
+        <div class="field">
+          <label>بالدولار (اختياري)</label>
+          <input id="f_amountUsd" type="number" placeholder="0" class="num-input" onkeydown="if(event.key==='Enter') addEntry()">
         </div>
         <div class="field">
           <label>التاريخ</label>
@@ -255,7 +265,7 @@
       </div>
       <div class="field" style="margin-top:12px;">
         <label>ملاحظة (اختياري)</label>
-        <input id="f_note" placeholder="مثال: اسم الطالب أو تفاصيل سريعة">
+        <input id="f_note" placeholder="مثال: اسم الطالب أو تفاصيل سريعة" onkeydown="if(event.key==='Enter') addEntry()">
       </div>
       </div>
 
@@ -330,6 +340,10 @@
     <div class="field" style="margin-top:12px;">
       <label>المبلغ (ج.م)</label>
       <input id="editAmount" type="number" placeholder="0 (سالب = استرداد)" class="num-input">
+    </div>
+    <div class="field" style="margin-top:12px;">
+      <label>بالدولار (اختياري)</label>
+      <input id="editAmountUsd" type="number" placeholder="0" class="num-input">
     </div>
     <div class="field" style="margin-top:12px;">
       <label>التاريخ</label>
@@ -531,36 +545,81 @@ const LocalOnlyStore = {
   async get(key){ try{ const value = localStorage.getItem(key); return value===null ? null : { key, value }; }catch(e){ return null; } },
   async set(key, value){ try{ localStorage.setItem(key, value); return { key, value }; }catch(e){ return null; } }
 };
+const NETWORK_TIMEOUT_MS = 20000;
+function fetchWithTimeout(url, opts){
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), NETWORK_TIMEOUT_MS);
+  return fetch(url, Object.assign({}, opts, { signal: controller.signal })).finally(()=>clearTimeout(timer));
+}
 const SheetSyncStore = {
   async _call(payload){
     try{
-      const res = await fetch(getSyncUrl(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
+      const res = await fetchWithTimeout(getSyncUrl(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
       if(!res.ok) return null;
       return await res.json();
-    }catch(e){ return null; }
+    }catch(e){ return null; } // covers both network errors and our own timeout abort — never hangs the caller
   },
   async get(key){ const result = await this._call({ action:'get', key }); if(!result || result.value===undefined || result.value===null) return null; return { key, value: result.value }; },
   async set(key, value){ const result = await this._call({ action:'set', key, value }); return result ? { key, value } : null; }
 };
 function getStore(){ return isSyncConfigured() ? SheetSyncStore : LocalOnlyStore; }
 
-async function loadData(){
+function applyLoadedData(parsed){
+  data.entries = parsed.entries||[];
+  data.handovers = parsed.handovers||[];
+  data.categories = parsed.categories||null;
+  data.adminPassword = parsed.adminPassword||'';
+  data.viewerPassword = parsed.viewerPassword||'';
+  data.lastModified = parsed.lastModified||'';
+}
+
+// Loads local data instantly (no network wait — never hangs the UI). Call refreshFromCloud() separately for the background cloud check.
+function loadLocalData(){
   try{
-    const result = await getStore().get(STORAGE_KEY);
-    if(result && result.value){ const parsed = JSON.parse(result.value); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; data.categories = parsed.categories||null; data.adminPassword = parsed.adminPassword||''; data.viewerPassword = parsed.viewerPassword||''; }
-    else if(isSyncConfigured()){
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if(raw){ const parsed = JSON.parse(raw); data.entries = parsed.entries||[]; data.handovers = parsed.handovers||[]; data.categories = parsed.categories||null; data.adminPassword = parsed.adminPassword||''; data.viewerPassword = parsed.viewerPassword||''; await saveData(); }
-    }
-  }catch(e){ console.error('load error', e); }
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) applyLoadedData(JSON.parse(raw));
+  }catch(e){ console.error('local load error', e); }
   if(!data.categories || !data.categories.length){ data.categories = DEFAULT_CATEGORIES.map(c=>({...c})); }
   updateSyncBtn();
+}
+
+// Background cloud check: only adopts cloud data if it is strictly newer than what we already have locally,
+// so a slow/late network response can never overwrite newer local (possibly offline-made) changes.
+async function refreshFromCloud(){
+  if(!isSyncConfigured()) return;
+  try{
+    const result = await getStore().get(STORAGE_KEY);
+    if(result && result.value){
+      const cloud = JSON.parse(result.value);
+      const cloudTime = cloud.lastModified || '';
+      const localTime = data.lastModified || '';
+      if(cloudTime > localTime){
+        const hadNoLocalPassword = !data.adminPassword;
+        applyLoadedData(cloud);
+        if(!data.categories || !data.categories.length){ data.categories = DEFAULT_CATEGORIES.map(c=>({...c})); }
+        populateCategorySelect();
+        if(currentRole){
+          render();
+        } else if(hadNoLocalPassword && data.adminPassword && document.getElementById('setupOverlay').classList.contains('open')){
+          // we were showing "first-time setup" locally, but the cloud turned out to already have an account — switch to login instead
+          document.getElementById('setupOverlay').classList.remove('open');
+          document.getElementById('loginOverlay').classList.add('open');
+        }
+      } else if(localTime > cloudTime){
+        scheduleCloudSync(); // we have newer local changes the cloud doesn't know about yet — push them up
+      }
+    } else {
+      // cloud empty/unreachable right now — seed it with local once we have something to save
+      if(data.entries.length || data.handovers.length || data.adminPassword) scheduleCloudSync();
+    }
+  }catch(e){ console.error('cloud refresh failed', e); }
 }
 
 let syncTimer = null;
 let syncInFlight = false;
 let syncPendingAgain = false;
 async function saveData(){
+  data.lastModified = new Date().toISOString();
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }catch(e){ showToast('فشل الحفظ محليًا — جرب تصدير نسخة احتياطية'); console.error(e); return; }
@@ -571,14 +630,26 @@ function scheduleCloudSync(){
   setSyncIndicator('pending');
   syncTimer = setTimeout(runCloudSync, 700);
 }
-async function runCloudSync(){
+async function runCloudSync(retryCount){
+  retryCount = retryCount || 0;
   if(syncInFlight){ syncPendingAgain = true; return; }
   syncInFlight = true;
   setSyncIndicator('saving');
   const snapshot = JSON.stringify(data);
   const result = await getStore().set(STORAGE_KEY, snapshot);
   syncInFlight = false;
-  if(!result){ setSyncIndicator('error'); showToast('تعذّر الحفظ على جوجل شيت — البيانات محفوظة محليًا بس دلوقتي'); }
+  if(!result){
+    const maxRetries = 2;
+    if(retryCount < maxRetries){
+      // transient network hiccup or a slow Apps Script cold start — retry quietly before bothering the user
+      const backoffMs = [3000, 7000][retryCount];
+      setSyncIndicator('pending');
+      setTimeout(()=>runCloudSync(retryCount+1), backoffMs);
+      return;
+    }
+    setSyncIndicator('error');
+    showToast('تعذّر الحفظ على جوجل شيت — البيانات محفوظة محليًا وهتترفع أول ما النت يرجع');
+  }
   else{ setSyncIndicator('saved'); }
   if(syncPendingAgain){ syncPendingAgain=false; scheduleCloudSync(); }
 }
@@ -617,7 +688,11 @@ async function saveSyncUrl(){
     }
   }
   updateSyncBtn();
-  await loadData();
+  if(url){
+    const result = await SheetSyncStore.get(STORAGE_KEY);
+    if(result && result.value){ applyLoadedData(JSON.parse(result.value)); }
+  }
+  if(!data.categories || !data.categories.length){ data.categories = DEFAULT_CATEGORIES.map(c=>({...c})); }
   populateCategorySelect();
   closeSyncModal();
   if(currentRole){
@@ -643,7 +718,13 @@ function categoryTotals(list){
   list.forEach(e=>{ t[e.category]=(t[e.category]||0)+Number(e.amount); });
   return t;
 }
+function categoryTotalsUsd(list){
+  const t={}; CATEGORIES().forEach(c=>t[c.key]=0);
+  list.forEach(e=>{ t[e.category]=(t[e.category]||0)+Number(e.amountUsd||0); });
+  return t;
+}
 function grandTotal(list){ return list.reduce((a,e)=>a+Number(e.amount),0); }
+function grandTotalUsd(list){ return list.reduce((a,e)=>a+Number(e.amountUsd||0),0); }
 
 function populateCategorySelect(){
   const sel=document.getElementById('f_category');
@@ -729,16 +810,18 @@ async function addEntry(){
   if(!requireAdmin()) return;
   const category=document.getElementById('f_category').value;
   const amount=Number(document.getElementById('f_amount').value)||0;
+  const amountUsd=Number(document.getElementById('f_amountUsd').value)||0;
   const date=document.getElementById('f_date').value || todayStr();
   const note=document.getElementById('f_note').value.trim();
-  if(amount===0){ showToast('اكتب مبلغ مختلف عن صفر (رقم سالب = استرداد)'); return; }
-  data.entries.push({ id:uid(), date, category, amount, note, createdAt:new Date().toISOString(), handoverId:null });
+  if(amount===0 && amountUsd===0){ showToast('اكتب مبلغ بالجنيه أو بالدولار على الأقل'); return; }
+  data.entries.push({ id:uid(), date, category, amount, amountUsd, note, createdAt:new Date().toISOString(), handoverId:null });
   await saveData();
   document.getElementById('f_amount').value='';
+  document.getElementById('f_amountUsd').value='';
   document.getElementById('f_note').value='';
   document.getElementById('f_amount').focus();
   render();
-  showToast(amount<0 ? 'تم تسجيل الاسترداد' : 'تم تسجيل المبلغ');
+  showToast((amount<0||amountUsd<0) ? 'تم تسجيل الاسترداد' : 'تم تسجيل المبلغ');
 }
 
 async function deleteEntry(id){
@@ -757,6 +840,7 @@ function openEditEntryModal(id){
   sel.innerHTML = CATEGORIES().map(c=>`<option value="${c.key}">${c.icon} ${c.label}</option>`).join('');
   sel.value = e.category;
   document.getElementById('editAmount').value = e.amount;
+  document.getElementById('editAmountUsd').value = e.amountUsd||0;
   document.getElementById('editDate').value = e.date;
   document.getElementById('editNote').value = e.note||'';
   document.getElementById('editEntryOverlay').classList.add('open');
@@ -766,9 +850,11 @@ async function saveEditedEntry(){
   if(!requireAdmin()) return;
   const e = data.entries.find(x=>x.id===editingEntryId); if(!e) return;
   const amount = Number(document.getElementById('editAmount').value)||0;
-  if(amount===0){ showToast('اكتب مبلغ مختلف عن صفر'); return; }
+  const amountUsd = Number(document.getElementById('editAmountUsd').value)||0;
+  if(amount===0 && amountUsd===0){ showToast('اكتب مبلغ بالجنيه أو بالدولار على الأقل'); return; }
   e.category = document.getElementById('editCategory').value;
   e.amount = amount;
+  e.amountUsd = amountUsd;
   e.date = document.getElementById('editDate').value || e.date;
   e.note = document.getElementById('editNote').value.trim();
   await saveData();
@@ -780,15 +866,25 @@ async function saveEditedEntry(){
 function renderCatGrid(){
   const pending = pendingEntries();
   const totals = categoryTotals(pending);
+  const totalsUsd = categoryTotalsUsd(pending);
   document.getElementById('catGrid').innerHTML = CATEGORIES().map(c=>`
     <div class="cat-card">
       <span class="ic">${c.icon}</span>
       <div class="lbl">${escapeHtml(c.label)}</div>
       <div class="amt num" style="color:${totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(totals[c.key])} ج.م</div>
+      ${totalsUsd[c.key]!==0 ? `<div class="amt num" style="font-size:12.5px;margin-top:2px;color:${totalsUsd[c.key]<0?'var(--bad)':'var(--ink-soft)'};">${fmt(totalsUsd[c.key])} $</div>` : ''}
     </div>
   `).join('');
 }
 
+function dayLabel(dateStr){
+  const today = todayStr();
+  const y = new Date(); y.setDate(y.getDate()-1);
+  const yesterday = localDateStr(y);
+  if(dateStr===today) return 'اليوم — '+dateStr;
+  if(dateStr===yesterday) return 'إمبارح — '+dateStr;
+  return dateStr;
+}
 function renderEntryList(){
   const pending = pendingEntries().slice().sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
   const list=document.getElementById('entryList');
@@ -796,27 +892,48 @@ function renderEntryList(){
     list.innerHTML='<div class="entry-empty">مفيش مبالغ معلّقة حاليًا — سجّل أول مبلغ فوق</div>';
     return;
   }
-  list.innerHTML = pending.map(e=>{
-    const isRefund = e.amount<0;
+  // group by date, most recent day first
+  const groups = {};
+  pending.forEach(e=>{ (groups[e.date] = groups[e.date]||[]).push(e); });
+  const dates = Object.keys(groups).sort((a,b)=> b.localeCompare(a));
+  list.innerHTML = dates.map(d=>{
+    const dayEntries = groups[d];
+    const dayTotal = grandTotal(dayEntries);
+    const dayTotalUsd = grandTotalUsd(dayEntries);
+    const rows = dayEntries.map(e=>{
+      const isRefund = e.amount<0 || (e.amountUsd||0)<0;
+      const usdPart = e.amountUsd ? `<span class="amt num" style="color:${e.amountUsd<0?'var(--bad)':'var(--ink-soft)'};font-size:12.5px;margin-inline-end:6px;">${fmt(e.amountUsd)} $</span>` : '';
+      return `
+      <div class="entry-row">
+        <div>
+          <div class="cat">${catIcon(e.category)} ${escapeHtml(catLabel(e.category))}${isRefund?' <span style="color:var(--bad);font-size:11px;">(استرداد)</span>':''}</div>
+          <div class="meta">${e.note?escapeHtml(e.note):''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${usdPart}
+          <span class="amt num" style="color:${e.amount<0?'var(--bad)':'var(--gold-bright)'};">${fmt(e.amount)} ج.م</span>
+          ${currentRole==='admin' ? `<button class="del-btn" style="opacity:0.85;" onclick="openEditEntryModal('${e.id}')" title="تعديل">✏️</button><button class="del-btn" onclick="deleteEntry('${e.id}')" title="حذف">🗑️</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
     return `
-    <div class="entry-row">
-      <div>
-        <div class="cat">${catIcon(e.category)} ${escapeHtml(catLabel(e.category))}${isRefund?' <span style="color:var(--bad);font-size:11px;">(استرداد)</span>':''}</div>
-        <div class="meta">${e.date}${e.note?' · '+escapeHtml(e.note):''}</div>
+    <div class="day-group">
+      <div class="day-group-head">
+        <span>${dayLabel(d)}</span>
+        <span class="num">${fmt(dayTotal)} ج.م${dayTotalUsd?` + ${fmt(dayTotalUsd)} $`:''}</span>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span class="amt num" style="color:${isRefund?'var(--bad)':'var(--gold-bright)'};">${fmt(e.amount)} ج.م</span>
-        ${currentRole==='admin' ? `<button class="del-btn" style="opacity:0.85;" onclick="openEditEntryModal('${e.id}')" title="تعديل">✏️</button><button class="del-btn" onclick="deleteEntry('${e.id}')" title="حذف">🗑️</button>` : ''}
-      </div>
+      ${rows}
     </div>`;
   }).join('');
 }
 
 function renderGrandBar(){
-  const total = grandTotal(pendingEntries());
-  document.getElementById('grandPending').textContent = fmt(total)+' ج.م';
-  document.getElementById('headerPending').textContent = fmt(total);
-  document.getElementById('handoverBtn').disabled = pendingEntries().length===0;
+  const pending = pendingEntries();
+  const total = grandTotal(pending);
+  const totalUsd = grandTotalUsd(pending);
+  document.getElementById('grandPending').textContent = fmt(total)+' ج.م'+(totalUsd?` + ${fmt(totalUsd)} $`:'');
+  document.getElementById('headerPending').textContent = fmt(total)+(totalUsd?` (+${fmt(totalUsd)}$)`:'');
+  document.getElementById('handoverBtn').disabled = pending.length===0;
 }
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
@@ -835,12 +952,17 @@ function renderHistory(){
     const dateStr = dt.toLocaleDateString('ar-EG');
     const timeStr = dt.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
     const isOpen = openHistoryIds.has(h.id);
-    const rows = CATEGORIES().map(c=> h.totals[c.key]!==0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num" style="color:${h.totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(h.totals[c.key])} ج.م</span></div>` : '').join('');
+    const rows = CATEGORIES().map(c=>{
+      const usdVal = (h.totalsUsd && h.totalsUsd[c.key]) || 0;
+      if(h.totals[c.key]===0 && usdVal===0) return '';
+      const usdPart = usdVal ? ` <span style="color:var(--ink-soft);">+ ${fmt(usdVal)}$</span>` : '';
+      return `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num" style="color:${h.totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(h.totals[c.key])} ج.م${usdPart}</span></div>`;
+    }).join('');
     return `
     <div class="history-item">
       <div class="history-head" onclick="toggleHistory('${h.id}')">
         <span><span class="date">${dateStr}</span><span class="time">${timeStr}</span></span>
-        <span class="total num">${fmt(h.total)} ج.م</span>
+        <span class="total num">${fmt(h.total)} ج.م${h.totalUsd?` + ${fmt(h.totalUsd)}$`:''}</span>
       </div>
       <div class="history-body ${isOpen?'open':''}" id="hbody-${h.id}">
         ${rows}
@@ -888,9 +1010,15 @@ function openHandoverModal(){
   const pending = pendingEntries();
   if(pending.length===0){ showToast('مفيش مبالغ معلّقة للتسليم'); return; }
   const totals = categoryTotals(pending);
+  const totalsUsd = categoryTotalsUsd(pending);
   const total = grandTotal(pending);
-  const rows = CATEGORIES().map(c=> totals[c.key]!==0 ? `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num" style="color:${totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(totals[c.key])} ج.م</span></div>` : '').join('');
-  document.getElementById('handoverBreakdown').innerHTML = rows + `<div class="d-row grand"><span>الإجمالي</span><span class="num">${fmt(total)} ج.م</span></div>`;
+  const totalUsd = grandTotalUsd(pending);
+  const rows = CATEGORIES().map(c=>{
+    if(totals[c.key]===0 && totalsUsd[c.key]===0) return '';
+    const usdPart = totalsUsd[c.key] ? ` <span style="color:var(--ink-soft);">+ ${fmt(totalsUsd[c.key])}$</span>` : '';
+    return `<div class="d-row"><span>${c.icon} ${escapeHtml(c.label)}</span><span class="num" style="color:${totals[c.key]<0?'var(--bad)':'var(--gold-bright)'};">${fmt(totals[c.key])} ج.م${usdPart}</span></div>`;
+  }).join('');
+  document.getElementById('handoverBreakdown').innerHTML = rows + `<div class="d-row grand"><span>الإجمالي</span><span class="num">${fmt(total)} ج.م${totalUsd?` + ${fmt(totalUsd)} $`:''}</span></div>`;
   document.getElementById('handoverNote').value='';
   document.getElementById('handoverDate').value = todayStr();
   document.getElementById('handoverOverlay').classList.add('open');
@@ -903,13 +1031,15 @@ async function confirmHandover(){
   if(pending.length===0){ closeHandoverModal(); return; }
   const id=uid();
   const totals=categoryTotals(pending);
+  const totalsUsd=categoryTotalsUsd(pending);
   const total=grandTotal(pending);
+  const totalUsd=grandTotalUsd(pending);
   const note=document.getElementById('handoverNote').value.trim();
   const chosenDate = document.getElementById('handoverDate').value || todayStr();
   const now = new Date();
   const timePart = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
   const handedOverAt = new Date(`${chosenDate}T${timePart}`).toISOString();
-  data.handovers.push({ id, handedOverAt, totals, total, note, entryIds:pending.map(e=>e.id) });
+  data.handovers.push({ id, handedOverAt, totals, totalsUsd, total, totalUsd, note, entryIds:pending.map(e=>e.id) });
   pending.forEach(e=>e.handoverId=id);
   await saveData();
   closeHandoverModal();
@@ -977,14 +1107,16 @@ async function exportExcelReport(){
     ws1.columns = [
       {header:'Date', key:'date', width:14},
       {header:'Time', key:'time', width:10},
-      ...CATEGORIES().map(c=>({header:c.label, key:c.key, width:18})),
-      {header:'Total', key:'total', width:14},
+      ...CATEGORIES().map(c=>({header:c.label+' (EGP)', key:c.key, width:18})),
+      ...CATEGORIES().map(c=>({header:c.label+' (USD)', key:c.key+'_usd', width:16})),
+      {header:'Total (EGP)', key:'total', width:14},
+      {header:'Total (USD)', key:'totalUsd', width:14},
       {header:'Note', key:'note', width:30},
     ];
     handoversInRange.slice().sort((a,b)=> new Date(a.handedOverAt)-new Date(b.handedOverAt)).forEach(h=>{
       const dt=new Date(h.handedOverAt);
-      const row={ date: localDateStr(dt), time: dt.toTimeString().slice(0,5), total: h.total, note: h.note||'' };
-      CATEGORIES().forEach(c=>{ row[c.key]=h.totals[c.key]||0; });
+      const row={ date: localDateStr(dt), time: dt.toTimeString().slice(0,5), total: h.total, totalUsd: h.totalUsd||0, note: h.note||'' };
+      CATEGORIES().forEach(c=>{ row[c.key]=h.totals[c.key]||0; row[c.key+'_usd']=(h.totalsUsd && h.totalsUsd[c.key])||0; });
       ws1.addRow(row);
     });
     sheets.push(ws1);
@@ -995,13 +1127,14 @@ async function exportExcelReport(){
     ws2.columns = [
       {header:'Date', key:'date', width:14},
       {header:'Category', key:'category', width:22},
-      {header:'Amount', key:'amount', width:14},
+      {header:'Amount (EGP)', key:'amount', width:14},
+      {header:'Amount (USD)', key:'amountUsd', width:14},
       {header:'Note', key:'note', width:26},
       {header:'Status', key:'status', width:14},
       {header:'Recorded At', key:'createdAt', width:20},
     ];
     entriesInRange.slice().sort((a,b)=> new Date(a.createdAt)-new Date(b.createdAt)).forEach(e=>{
-      ws2.addRow({ date:e.date, category:catLabel(e.category), amount:e.amount, note:e.note||'', status: e.handoverId?'Handed over':'Pending', createdAt: e.createdAt.slice(0,16).replace('T',' ') });
+      ws2.addRow({ date:e.date, category:catLabel(e.category), amount:e.amount, amountUsd:e.amountUsd||0, note:e.note||'', status: e.handoverId?'Handed over':'Pending', createdAt: e.createdAt.slice(0,16).replace('T',' ') });
     });
     sheets.push(ws2);
   }
@@ -1142,24 +1275,26 @@ async function saveAccounts(){
   showToast('تم تحديث كلمات السر');
 }
 
-async function initAuth(){
-  await loadData();
+function initAuth(){
+  loadLocalData();
   populateCategorySelect();
   if(!data.adminPassword){
     document.getElementById('loginOverlay').classList.remove('open');
     document.getElementById('setupOverlay').classList.add('open');
-    return;
-  }
-  let savedRole = null;
-  try{ savedRole = sessionStorage.getItem(ROLE_KEY); }catch(e){}
-  if(savedRole==='admin' || savedRole==='viewer'){
-    currentRole = savedRole;
-    document.getElementById('loginOverlay').classList.remove('open');
-    applyRoleUI();
-    render();
   } else {
-    document.getElementById('loginOverlay').classList.add('open');
+    let savedRole = null;
+    try{ savedRole = sessionStorage.getItem(ROLE_KEY); }catch(e){}
+    if(savedRole==='admin' || savedRole==='viewer'){
+      currentRole = savedRole;
+      document.getElementById('loginOverlay').classList.remove('open');
+      applyRoleUI();
+      render();
+    } else {
+      document.getElementById('loginOverlay').classList.add('open');
+    }
   }
+  // network check happens in the background with a timeout — never blocks the screen above
+  refreshFromCloud();
 }
 
 updateSyncBtn();
