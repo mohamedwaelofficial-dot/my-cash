@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --bg:#FAF7F0;
@@ -418,26 +420,36 @@
 
 <!-- Sync setup modal -->
 <div class="overlay" id="syncOverlay" style="z-index:400;" onclick="if(event.target===this) closeSyncModal()">
-  <div class="modal" style="max-width:520px;">
-    <h3>☁️ ربط جوجل شيت (نسخة سحابية)</h3>
+  <div class="modal" style="max-width:560px;">
+    <h3>☁️ ربط Firebase (نسخة سحابية)</h3>
     <div style="font-size:13px;color:var(--ink-soft);line-height:1.9;margin-bottom:14px;">
-      من غير ربط، البيانات بتتخزن على المتصفح بس (يعني كل جهاز هيبقى بياناته لوحده). اربط جوجل شيت عشان البيانات تتحفظ سحابيًا وتفتح نفس البيانات من أي جهاز.
-      <br><b style="color:var(--gold-bright);">لو الشيت ده معمول قبل كده من جهاز تاني، الصق نفس اللينك القديم بالظبط تحت — مش هتحتاج تعمل شيت جديد.</b>
+      من غير ربط، البيانات بتتخزن على المتصفح بس (يعني كل جهاز هيبقى بياناته لوحده). اربط Firebase عشان البيانات تتحفظ سحابيًا من غير أي حد أقصى، وتفتح نفس البيانات من أي جهاز.
+      <br><b style="color:var(--gold-bright);">لو عامل الإعداد ده قبل كده من جهاز تاني، الصق نفس بيانات الإعداد (Config) بالظبط تحت — مش هتحتاج تعمل مشروع جديد.</b>
       <ol style="padding-inline-start:18px; margin:10px 0;">
-        <li>افتح Google Sheet جديد فاضي.</li>
-        <li>من القائمة: Extensions ← Apps Script.</li>
-        <li>امسح أي كود موجود، والصق كود Apps Script اللي معاك.</li>
-        <li>Deploy ← New deployment ← Type: Web app ← Execute as: Me ← Who has access: Anyone.</li>
-        <li>اضغط Deploy وانسخ الرابط اللي يخلص بـ <span class="num">/exec</span> وحطه هنا تحت.</li>
+        <li>افتح <span class="num">console.firebase.google.com</span> وسجّل دخول بحساب جوجل بتاعك.</li>
+        <li>Add project ← اكتب اسم أي حاجة (مثلاً my-cash) ← كمّل الخطوات الافتراضية لحد ما يتعمل.</li>
+        <li>من القائمة على الشمال: Build ← Firestore Database ← Create database ← اختار أي منطقة قريبة ← Start in <b>production mode</b>.</li>
+        <li>روح لـ Rules فوق واستبدل الموجود بالنص ده بالظبط، وبعدين Publish:
+          <div style="background:var(--bg-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:6px;font-family:var(--mono);font-size:11px;white-space:pre-wrap;direction:ltr;text-align:left;">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /cash_treasury/{doc} {
+      allow read, write: if true;
+    }
+  }
+}</div>
+        </li>
+        <li>من ⚙️ (جنب "Project Overview") ← Project settings ← تحت "Your apps" دوس على أيقونة الويب <span class="num">&lt;/&gt;</span> ← سجّل اسم أي حاجة ← Register app.</li>
+        <li>هيوريك كود فيه حاجة اسمها <span class="num">firebaseConfig = {...}</span> — انسخ الجزء ده بس (من <span class="num">{</span> لحد <span class="num">}</span>) والصقه هنا تحت.</li>
       </ol>
     </div>
     <div class="field">
-      <label>رابط Google Apps Script (/exec)</label>
-      <input id="syncUrlInput" placeholder="https://script.google.com/macros/s/.../exec">
+      <label>Firebase Config (الصق الكود كامل زي ما هو)</label>
+      <textarea id="firebaseConfigInput" rows="6" style="width:100%;background:var(--bg-2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:11px 13px;font-size:12.5px;font-family:var(--mono);direction:ltr;text-align:left;" placeholder='{ apiKey: "...", authDomain: "...", projectId: "...", ... }'></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost btn-block" onclick="closeSyncModal()">إلغاء</button>
-      <button class="btn btn-gold btn-block" onclick="saveSyncUrl()">حفظ وربط</button>
+      <button class="btn btn-gold btn-block" onclick="saveFirebaseConfig()">حفظ وربط</button>
     </div>
     <div id="syncStatusMsg" style="margin-top:12px;font-size:12.5px;color:var(--ink-soft);"></div>
   </div>
@@ -459,7 +471,7 @@
     <div id="loginError" style="color:var(--bad);font-size:12.5px;margin-top:8px;min-height:16px;"></div>
     <button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="attemptLogin()">دخول</button>
     <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
-      <button class="btn btn-ghost btn-block btn-sm" onclick="openSyncModal()">☁️ بتفتح من جهاز جديد؟ اربط جوجل شيت هنا</button>
+      <button class="btn btn-ghost btn-block btn-sm" onclick="openSyncModal()">☁️ بتفتح من جهاز جديد؟ اربط Firebase هنا</button>
     </div>
   </div>
 </div>
@@ -520,7 +532,7 @@ const DEFAULT_CATEGORIES = [
   {key:'test', label:'رسوم التيست', icon:'📝'},
 ];
 const STORAGE_KEY = 'cic_cash_treasury_v1';
-const SYNC_URL_KEY = 'cash_treasury_sync_url';
+const FIREBASE_CONFIG_KEY = 'cash_treasury_firebase_config';
 
 let data = { entries: [], handovers: [], categories: null, adminPassword:'', viewerPassword:'' };
 
@@ -538,31 +550,69 @@ function CATEGORIES(){ return (data.categories && data.categories.length) ? data
 function catLabel(key){ const c=CATEGORIES().find(c=>c.key===key); return c?c.label:'بند محذوف'; }
 function catIcon(key){ const c=CATEGORIES().find(c=>c.key===key); return c?c.icon:'❔'; }
 
-function getSyncUrl(){ try{ return localStorage.getItem(SYNC_URL_KEY)||''; }catch(e){ return ''; } }
-function isSyncConfigured(){ const u=getSyncUrl(); return !!(u && u.indexOf('http')===0); }
+function getFirebaseConfigRaw(){ try{ return localStorage.getItem(FIREBASE_CONFIG_KEY)||''; }catch(e){ return ''; } }
+function parseFirebaseConfig(raw){
+  if(!raw) return null;
+  try{
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if(start===-1 || end===-1 || end<start) return null;
+    const objText = raw.slice(start, end+1);
+    const jsonish = objText
+      .replace(/([{,]\s*)([A-Za-z_$][A-Za-z0-9_$]*)\s*:/g, '$1"$2":') // quote bare keys only (right after { or ,)
+      .replace(/'/g, '"')
+      .replace(/,(\s*[}\]])/g, '$1'); // drop trailing commas
+    const parsed = JSON.parse(jsonish);
+    if(parsed && parsed.apiKey && parsed.projectId) return parsed;
+    return null;
+  }catch(e){ return null; }
+}
+function isSyncConfigured(){ return !!parseFirebaseConfig(getFirebaseConfigRaw()); }
 
 const LocalOnlyStore = {
   async get(key){ try{ const value = localStorage.getItem(key); return value===null ? null : { key, value }; }catch(e){ return null; } },
   async set(key, value){ try{ localStorage.setItem(key, value); return { key, value }; }catch(e){ return null; } }
 };
 const NETWORK_TIMEOUT_MS = 20000;
-function fetchWithTimeout(url, opts){
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), NETWORK_TIMEOUT_MS);
-  return fetch(url, Object.assign({}, opts, { signal: controller.signal })).finally(()=>clearTimeout(timer));
+function withTimeout(promise){
+  return Promise.race([
+    promise,
+    new Promise((_, reject)=> setTimeout(()=>reject(new Error('timeout')), NETWORK_TIMEOUT_MS))
+  ]);
 }
-const SheetSyncStore = {
-  async _call(payload){
+let firebaseApp = null;
+let firestoreDb = null;
+function getFirestoreDb(){
+  const config = parseFirebaseConfig(getFirebaseConfigRaw());
+  if(!config) return null;
+  try{
+    if(!firebaseApp){
+      firebaseApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(config);
+      firestoreDb = firebase.firestore();
+    }
+    return firestoreDb;
+  }catch(e){ console.error('firebase init failed', e); return null; }
+}
+const FirebaseStore = {
+  async get(key){
+    const db = getFirestoreDb(); if(!db) return null;
     try{
-      const res = await fetchWithTimeout(getSyncUrl(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
-      if(!res.ok) return null;
-      return await res.json();
-    }catch(e){ return null; } // covers both network errors and our own timeout abort — never hangs the caller
+      const snap = await withTimeout(db.collection('cash_treasury').doc(key).get());
+      if(!snap.exists) return null;
+      const value = snap.data().value;
+      if(value===undefined || value===null) return null;
+      return { key, value };
+    }catch(e){ return null; }
   },
-  async get(key){ const result = await this._call({ action:'get', key }); if(!result || result.value===undefined || result.value===null) return null; return { key, value: result.value }; },
-  async set(key, value){ const result = await this._call({ action:'set', key, value }); return result ? { key, value } : null; }
+  async set(key, value){
+    const db = getFirestoreDb(); if(!db) return null;
+    try{
+      await withTimeout(db.collection('cash_treasury').doc(key).set({ value, updatedAt: Date.now() }));
+      return { key, value };
+    }catch(e){ return null; }
+  }
 };
-function getStore(){ return isSyncConfigured() ? SheetSyncStore : LocalOnlyStore; }
+function getStore(){ return isSyncConfigured() ? FirebaseStore : LocalOnlyStore; }
 
 function applyLoadedData(parsed){
   data.entries = parsed.entries||[];
@@ -641,14 +691,14 @@ async function runCloudSync(retryCount){
   if(!result){
     const maxRetries = 2;
     if(retryCount < maxRetries){
-      // transient network hiccup or a slow Apps Script cold start — retry quietly before bothering the user
+      // transient network hiccup — retry quietly before bothering the user
       const backoffMs = [3000, 7000][retryCount];
       setSyncIndicator('pending');
       setTimeout(()=>runCloudSync(retryCount+1), backoffMs);
       return;
     }
     setSyncIndicator('error');
-    showToast('تعذّر الحفظ على جوجل شيت — البيانات محفوظة محليًا وهتترفع أول ما النت يرجع');
+    showToast('تعذّر الحفظ على Firebase — البيانات محفوظة محليًا وهتترفع أول ما النت يرجع');
   }
   else{ setSyncIndicator('saved'); }
   if(syncPendingAgain){ syncPendingAgain=false; scheduleCloudSync(); }
@@ -658,38 +708,42 @@ function setSyncIndicator(state){
   if(!isSyncConfigured()){ btn.textContent='☁️ الاتصال'; return; }
   if(state==='pending' || state==='saving'){ btn.textContent='☁️ بيتزامن...'; }
   else if(state==='error'){ btn.textContent='⚠️ فشل التزامن'; }
-  else{ btn.textContent='☁️ متصل بجوجل شيت'; }
+  else{ btn.textContent='☁️ متصل بـ Firebase'; }
 }
 function updateSyncBtn(){
   const btn=document.getElementById('syncBtn');
-  btn.textContent = isSyncConfigured() ? '☁️ متصل بجوجل شيت' : '☁️ الاتصال';
+  btn.textContent = isSyncConfigured() ? '☁️ متصل بـ Firebase' : '☁️ الاتصال';
   btn.style.color = isSyncConfigured() ? 'var(--good)' : '';
   btn.style.borderColor = isSyncConfigured() ? 'var(--good)' : '';
 }
 function openSyncModal(){
-  document.getElementById('syncUrlInput').value = getSyncUrl();
+  document.getElementById('firebaseConfigInput').value = getFirebaseConfigRaw();
   document.getElementById('syncStatusMsg').textContent='';
   document.getElementById('syncOverlay').classList.add('open');
 }
 function closeSyncModal(){ document.getElementById('syncOverlay').classList.remove('open'); }
-async function saveSyncUrl(){
-  const url = document.getElementById('syncUrlInput').value.trim();
-  if(url && url.indexOf('http')!==0){ showToast('الرابط لازم يبدأ بـ https'); return; }
+async function saveFirebaseConfig(){
+  const raw = document.getElementById('firebaseConfigInput').value.trim();
+  if(raw && !parseFirebaseConfig(raw)){
+    document.getElementById('syncStatusMsg').textContent='الكود ده مش شكله صحيح. تأكد إنك لصقت الـ firebaseConfig كامل زي ما جالك من Firebase.';
+    return;
+  }
   document.getElementById('syncStatusMsg').textContent='بيتأكد من الاتصال...';
-  try{ localStorage.setItem(SYNC_URL_KEY, url); }catch(e){}
-  if(url){
-    const result = await SheetSyncStore.get(STORAGE_KEY);
+  try{ localStorage.setItem(FIREBASE_CONFIG_KEY, raw); }catch(e){}
+  firebaseApp = null; firestoreDb = null; // force re-init with the new config
+  if(raw){
+    const result = await FirebaseStore.get(STORAGE_KEY);
     if(result===null){
-      const testSet = await SheetSyncStore.set(STORAGE_KEY, JSON.stringify(data));
+      const testSet = await FirebaseStore.set(STORAGE_KEY, JSON.stringify(data));
       if(!testSet){
-        document.getElementById('syncStatusMsg').textContent='مش قادر يوصل للرابط ده. تأكد إن الـ Deployment نوعه Web app والوصول Anyone.';
+        document.getElementById('syncStatusMsg').textContent='مش قادر يوصل بالإعداد ده. تأكد من الخطوات (خصوصًا الـ Rules) وجرب تاني.';
         return;
       }
     }
   }
   updateSyncBtn();
-  if(url){
-    const result = await SheetSyncStore.get(STORAGE_KEY);
+  if(raw){
+    const result = await FirebaseStore.get(STORAGE_KEY);
     if(result && result.value){ applyLoadedData(JSON.parse(result.value)); }
   }
   if(!data.categories || !data.categories.length){ data.categories = DEFAULT_CATEGORIES.map(c=>({...c})); }
@@ -705,11 +759,11 @@ async function saveSyncUrl(){
       document.getElementById('loginOverlay').classList.add('open');
       showToast('اتربط بنجاح — دلوقتي دخول بنفس كلمة السر اللي مضبوطة');
     } else {
-      showToast('اتربط، بس الشيت لسه فاضي — كمّل الإعداد وحط كلمة سر جديدة');
+      showToast('اتربط، بس القاعدة لسه فاضية — كمّل الإعداد وحط كلمة سر جديدة');
     }
     return;
   }
-  showToast(url ? 'تم الربط بنجاح' : 'تم إلغاء الربط — البيانات محلية بس دلوقتي');
+  showToast(raw ? 'تم الربط بنجاح' : 'تم إلغاء الربط — البيانات محلية بس دلوقتي');
 }
 
 function pendingEntries(){ return data.entries.filter(e=>!e.handoverId); }
