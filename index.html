@@ -405,7 +405,7 @@
     </div>
     <div style="margin-top:16px;">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);">
-        <input type="checkbox" id="exportIncludeHandovers" checked style="width:auto;"> ورقة التسليمات
+        <input type="checkbox" id="exportIncludeHandovers" checked style="width:auto;"> ورقة التقرير المحاسبي (تسليمات + ملخص)
       </label>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);margin-top:7px;">
         <input type="checkbox" id="exportIncludeEntries" checked style="width:auto;"> ورقة كل الحركات (تفصيلي)
@@ -1133,6 +1133,18 @@ function setExportRange(range){
   else if(range==='all'){ document.getElementById('exportFrom').value=''; document.getElementById('exportTo').value=''; }
 }
 
+function computeHandoverBreakdown(h){
+  const catEntries = data.entries.filter(e=>e.handoverId===h.id);
+  const cats = {}; CATEGORIES().forEach(c=>cats[c.key]=0);
+  let refund = 0;
+  catEntries.forEach(e=>{
+    if(e.amount>=0){ cats[e.category]=(cats[e.category]||0)+e.amount; }
+    else{ refund += Math.abs(e.amount); }
+  });
+  const total = Object.values(cats).reduce((a,b)=>a+b,0) - refund;
+  return { cats, refund, total };
+}
+
 async function exportExcelReport(){
   if(typeof ExcelJS==='undefined'){ showToast('مكتبة الإكسل لسه بتحمّل، جرب تاني بعد شوية'); return; }
   const from = document.getElementById('exportFrom').value;
@@ -1154,28 +1166,101 @@ async function exportExcelReport(){
   });
 
   const wb = new ExcelJS.Workbook();
-  const sheets = [];
+  const acctFmt = '_(* #,##0.00_);_(* (#,##0.00);_(* "-"??_);_(@_)';
+  const goldFill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFF2ECDC'}};
+  const goldFont = {bold:true, color:{argb:'FF8C6208'}};
 
   if(includeHandovers){
-    const ws1 = wb.addWorksheet('Handovers');
-    ws1.columns = [
-      {header:'Date', key:'date', width:14},
-      {header:'Time', key:'time', width:10},
-      ...CATEGORIES().map(c=>({header:c.label+' (EGP)', key:c.key, width:18})),
-      ...CATEGORIES().map(c=>({header:c.label+' (USD)', key:c.key+'_usd', width:16})),
-      {header:'Total (EGP)', key:'total', width:14},
-      {header:'Total (USD)', key:'totalUsd', width:14},
-      {header:'Note', key:'note', width:30},
-    ];
+    const catList = CATEGORIES();
+    const lastCol = 3 + catList.length; // date + categories + refund + total
+    const ws = wb.addWorksheet('Report', { views:[{ rightToLeft:true }] });
+
+    ws.mergeCells(1,1,1,lastCol);
+    ws.getCell(1,1).value = 'تقرير خزنة الكاش — Mohamed Wael';
+    ws.getCell(1,1).font = { bold:true, size:14, color:{argb:'FF8C6208'} };
+    ws.getCell(1,1).alignment = { horizontal:'center' };
+
+    ws.mergeCells(2,1,2,lastCol);
+    ws.getCell(2,1).value = `الفترة: ${from||'البداية'} إلى ${to||todayStr()}`;
+    ws.getCell(2,1).font = { italic:true, color:{argb:'FF6E6656'} };
+    ws.getCell(2,1).alignment = { horizontal:'center' };
+
+    let r = 4;
+    const headerRow = ws.getRow(r);
+    headerRow.getCell(1).value = 'التاريخ';
+    catList.forEach((c,i)=>{ headerRow.getCell(2+i).value = c.label; });
+    headerRow.getCell(2+catList.length).value = 'استرداد';
+    headerRow.getCell(lastCol).value = 'الإجمالي';
+    headerRow.eachCell(cell=>{ cell.font=goldFont; cell.fill=goldFill; cell.alignment={horizontal:'center'}; });
+    r++;
+
+    const catTotalsAll = {}; catList.forEach(c=>catTotalsAll[c.key]=0);
+    let refundTotalAll=0, grandTotalAll=0;
     handoversInRange.slice().sort((a,b)=> new Date(a.handedOverAt)-new Date(b.handedOverAt)).forEach(h=>{
-      const dt=new Date(h.handedOverAt);
-      const row={ date: localDateStr(dt), time: dt.toTimeString().slice(0,5), total: h.total, totalUsd: h.totalUsd||0, note: h.note||'' };
-      CATEGORIES().forEach(c=>{ row[c.key]=h.totals[c.key]||0; row[c.key+'_usd']=(h.totalsUsd && h.totalsUsd[c.key])||0; });
-      ws1.addRow(row);
+      const bd = computeHandoverBreakdown(h);
+      const row = ws.getRow(r);
+      row.getCell(1).value = localDateStr(h.handedOverAt);
+      catList.forEach((c,i)=>{ row.getCell(2+i).value = bd.cats[c.key]||0; row.getCell(2+i).numFmt = acctFmt; catTotalsAll[c.key]+=bd.cats[c.key]||0; });
+      row.getCell(2+catList.length).value = -bd.refund;
+      row.getCell(2+catList.length).numFmt = acctFmt;
+      row.getCell(lastCol).value = bd.total;
+      row.getCell(lastCol).numFmt = acctFmt;
+      refundTotalAll += bd.refund;
+      grandTotalAll += bd.total;
+      r++;
     });
-    sheets.push(ws1);
+
+    const totalRow = ws.getRow(r);
+    totalRow.getCell(1).value = 'الإجمالي';
+    catList.forEach((c,i)=>{ totalRow.getCell(2+i).value = catTotalsAll[c.key]; totalRow.getCell(2+i).numFmt=acctFmt; });
+    totalRow.getCell(2+catList.length).value = -refundTotalAll; totalRow.getCell(2+catList.length).numFmt=acctFmt;
+    totalRow.getCell(lastCol).value = grandTotalAll; totalRow.getCell(lastCol).numFmt=acctFmt;
+    totalRow.eachCell(cell=>{ cell.font={bold:true}; cell.border={top:{style:'thin'}}; });
+    r += 2;
+
+    ws.getCell(r,1).value = 'ملخص حسب البند';
+    ws.getCell(r,1).font = { bold:true, size:12, color:{argb:'FF8C6208'} };
+    r++;
+    catList.forEach(c=>{
+      ws.getCell(r,1).value = c.label;
+      ws.getCell(r,2).value = catTotalsAll[c.key];
+      ws.getCell(r,2).numFmt = acctFmt;
+      r++;
+    });
+    ws.getCell(r,1).value = 'استرداد'; ws.getCell(r,1).font={bold:true};
+    ws.getCell(r,2).value = -refundTotalAll; ws.getCell(r,2).numFmt=acctFmt; ws.getCell(r,2).font={bold:true};
+    r++;
+    ws.getCell(r,1).value = 'الإجمالي'; ws.getCell(r,1).font={bold:true};
+    ws.getCell(r,2).value = grandTotalAll; ws.getCell(r,2).numFmt=acctFmt; ws.getCell(r,2).font={bold:true};
+    r++;
+    ws.getCell(r,1).value = 'صافي المتحصلات (RECEIPTS)'; ws.getCell(r,1).font={bold:true};
+    ws.getCell(r,2).value = grandTotalAll; ws.getCell(r,2).numFmt=acctFmt; ws.getCell(r,2).font={bold:true};
+    r += 2;
+
+    ws.getCell(r,1).value = 'سجل التسليم للخزنة';
+    ws.getCell(r,1).font = { bold:true, size:12, color:{argb:'FF8C6208'} };
+    r++;
+    const delivHead = ws.getRow(r);
+    delivHead.getCell(1).value='التاريخ'; delivHead.getCell(2).value='الوقت'; delivHead.getCell(3).value='الإجمالي'; delivHead.getCell(4).value='ملاحظة (المستلم)';
+    delivHead.eachCell(cell=>{ cell.font={bold:true}; });
+    r++;
+    handoversInRange.slice().sort((a,b)=> new Date(a.handedOverAt)-new Date(b.handedOverAt)).forEach(h=>{
+      const dt = new Date(h.handedOverAt);
+      ws.getCell(r,1).value = localDateStr(dt);
+      ws.getCell(r,2).value = dt.toTimeString().slice(0,5);
+      ws.getCell(r,3).value = h.total; ws.getCell(r,3).numFmt = acctFmt;
+      ws.getCell(r,4).value = h.note||'—';
+      r++;
+    });
+
+    ws.getColumn(1).width = 14;
+    catList.forEach((c,i)=>{ ws.getColumn(2+i).width = Math.max(14, c.label.length+4); });
+    ws.getColumn(2+catList.length).width = 14;
+    ws.getColumn(lastCol).width = 16;
+    ws.getColumn(4).width = 30;
   }
 
+  const sheets = [];
   if(includeEntries){
     const ws2 = wb.addWorksheet('Entries');
     ws2.columns = [
@@ -1198,8 +1283,8 @@ async function exportExcelReport(){
   sheets.forEach(ws=>{
     const headerRow=ws.getRow(1);
     headerRow.eachCell(cell=>{
-      cell.fill={ type:'pattern', pattern:'solid', fgColor:{argb:'FFF2ECDC'} };
-      cell.font={ color:{argb:'FF8C6208'}, bold:true, size:11 };
+      cell.fill=goldFill;
+      cell.font=goldFont;
       cell.alignment={ horizontal:'center', vertical:'middle' };
     });
   });
